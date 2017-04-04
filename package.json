@@ -1,0 +1,8 @@
+{
+  "name": "autobot",
+  "version": "0.0.1",
+  "dependencies": {
+    "messaginghub-client":"^3.2.0",
+    "lime-transport-websocket": "^2.0.2"
+  }
+}
