@@ -5,7 +5,7 @@
 1. Fork this project and clone
 2. Set remote upstream
 ```
-git remote add upstream
+git remote add upstream https://github.com/gamabot/autobot
 ```
 3. Sync branches
 ```
