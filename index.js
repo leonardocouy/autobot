@@ -1,8 +1,7 @@
-/**
- * Created by webert on 03/04/17.
- */
 const ChatBotClient = require('./chatbot-client');
-const client = new ChatBotClient("autobot01", "RE5ZSERnd05wdnBJc0thZ3VtTjQ=", onConnect);
+const dotenv = require('dotenv').config();
+const client = new ChatBotClient(process.env.BLIP_IDENTIFIER,
+  process.env.BLIP_ACCESSKEY, onConnect);
 
 function onConnect(err, session){
     if(err){
