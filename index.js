@@ -3,7 +3,7 @@ const dotenv = require('dotenv').config();
 const express = require('express');
 const StatsD = require('node-statsd').StatsD;
 
-const statsDClient = new StatsD({host : localhost});
+const statsDClient = new StatsD({host : 'localhost'});
 
 const client = new ChatBotClient(process.env.BLIP_IDENTIFIER,
   process.env.BLIP_ACCESSKEY, onConnect);
