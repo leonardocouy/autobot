@@ -1,5 +1,20 @@
 # AutoBOT
 
+# Contributing
+
+1. Fork this project and clone
+2. Set remote upstream
+```
+git remote add upstream
+```
+3. Sync branches
+```
+git fetch upstream
+```
+4. Merge
+```
+git merge upstream/master
+```
 
 # How to run?
 
