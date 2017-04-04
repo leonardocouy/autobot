@@ -9,6 +9,7 @@
     "dotenv": "^4.0.0",
     "express": "^4.15.2",
     "lime-transport-websocket": "^2.0.2",
-    "messaginghub-client": "^3.2.0"
+    "messaginghub-client": "^3.2.0",
+    "node-statsd": "^0.1.1"
   }
 }
