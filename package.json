@@ -1,8 +1,13 @@
 {
   "name": "autobot",
   "version": "0.0.1",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
   "dependencies": {
     "dotenv": "^4.0.0",
+    "express": "^4.15.2",
     "lime-transport-websocket": "^2.0.2",
     "messaginghub-client": "^3.2.0"
   }
