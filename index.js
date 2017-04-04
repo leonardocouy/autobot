@@ -1,7 +1,10 @@
 const ChatBotClient = require('./chatbot-client');
 const dotenv = require('dotenv').config();
+const express = require('express');
 const client = new ChatBotClient(process.env.BLIP_IDENTIFIER,
   process.env.BLIP_ACCESSKEY, onConnect);
+const app = express();
+const port = process.env.PORT || 8080;
 
 function onConnect(err, session){
     if(err){
@@ -31,3 +34,7 @@ function onMessage(message){
 
     this.send(response);
 }
+
+app.listen(port, function() {
+    console.log('App is running on http://localhost:' + port);
+});
