@@ -1,14 +1,15 @@
 const ChatBotClient = require('./chatbot-client');
+const Constants = require('./constants')
+const Customer = require('./customer');
 const dotenv = require('dotenv').config();
 const express = require('express');
-const StatsD = require('node-statsd').StatsD;
-
-const statsDClient = new StatsD({host: 'localhost'});
+const StatsDClient = require('./statsd-client');
 
 const client = new ChatBotClient(process.env.BLIP_IDENTIFIER,
-    process.env.BLIP_ACCESSKEY, onConnect);
+                                 process.env.BLIP_ACCESSKEY,onConnect);
 const app = express();
 const port = process.env.PORT || 8080;
+const dashboard = new StatsDClient('gama.chatbot.autoja');
 
 function onConnect(err, session) {
     if (err) {
@@ -22,18 +23,59 @@ function onConnect(err, session) {
     this.addMessageReceiver(onMessage);
 }
 
-
 // function onNotification(notification) {
 //     console.log(notification);
 // }
 
-function onMessage(message) {
-    statsDClient.increment('gama.chatbot.autoja.newmessage');
-    // console.log(message);
+function fetchAccount(conversationId){
+    var customer = new Customer(conversationId);
+    var accountQuery = {
+        id : 1, //TODO: Generate Random ID
+        to : "postmaster@" +  customer.getChannel(),
+        method: "get",
+        uri : "lime://" + customer.getChannel() + "/accounts/" + customer.getId()
+    }
+
+    return client.command(accountQuery);
+}
+
+function onMessage(message){
+    var msgArriveTime = new Date().getTime();
+    dashboard.increment('newmessage');
+
+    var self = this;
+
+    fetchAccount(message.from).then(function(account) {
+        var welcomingStr = "Olá";
+        switch (account.resource.gender) {
+            case 'male':
+                welcomingStr += " Sr.";
+                break;
+            case 'female':
+                welcomingStr += " Sra.";
+                break;
+            default:
+                break;
+        }
+
+        var firstName = account.resource.fullName.match(/^([^\s]+)\s/)[1];
+        welcomingStr += " " + firstName + ". Tudo bem?";
+        var response = {
+            id : message.id,
+            to : message.from,
+            type : Constants.Type.TEXT_PLAIN,
+            content : welcomingStr
+        };
+
+        var respTime = new Date().getTime() - msgArriveTime;
+
+        self.send(response);
+        dashboard.timing("answer", respTime);
+    }).catch(function(err){
+        console("Error: fetch account returned", err);
+    });
+
     var content = message.content;
-
-    console.log(content)
-
     if (typeof content == 'object') {
 
         for (var i = 0; i < data[content.personagem].length; i++) {
@@ -48,28 +90,22 @@ function onMessage(message) {
                 break;
             }
         }
+    } else {
+        step = data.kadu[0];
     }
-    else
-        step = data.kadu[0]
 
-    var response = buildResponse(message, step)
+    var response = buildResponse(message, step);
     // console.log(response);
 
-    var context = this;
     setTimeout(function () {
-        context.send(response);
+        self.send(response);
     }, 3000)
 
-
     if (typeof step.nextStep != 'undefined') {
-
-
         setTimeout(function () {
-            nextStep(context, message, data, step, 1);
+            nextStep(self, message, data, step, 1);
         }, 6000)
-
     }
-
 
 }
 
@@ -112,7 +148,7 @@ function sendTyping(message) {
         }
     }
 
-    this.send(response);
+    self.send(response);
 }
 
 app.listen(port, function () {
