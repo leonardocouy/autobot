@@ -1,4 +1,6 @@
 const ChatBotClient = require('./chatbot-client');
+const Constants = require('./constants')
+const Customer = require('./customer');
 const dotenv = require('dotenv').config();
 const express = require('express');
 const StatsDClient = require('./statsd-client');
@@ -25,11 +27,53 @@ function onConnect(err, session) {
 //     console.log(notification);
 // }
 
+function fetchAccount(conversationId){
+    var customer = new Customer(conversationId);
+    var accountQuery = {
+        id : 1, //TODO: Generate ID
+        to : "postmaster@" +  customer.getChannel(),
+        method: "get",
+        uri : "lime://" + customer.getChannel() + "/accounts/" + customer.getId()
+    }
+
+    return client.command(accountQuery);
+}
+
 function onMessage(message){
+    var msgArriveTime = new Date().getTime();
     dashboard.increment('newmessage');
 
-    var content = message.content;
+    var self = this;
 
+    fetchAccount(message.from).then(function(account) {
+        var welcomingStr = "Olá";
+        switch (account.resource.gender) {
+            case 'male':
+                welcomingStr += " Sr.";
+                break;
+            case 'female':
+                welcomingStr += " Sra.";
+                break;
+            default:
+                break;
+        }
+
+        var firstName = account.resource.fullName.match(/^([^\s]+)\s/)[1];
+        welcomingStr += " " + firstName + ". Tudo bem?";
+        var response = {
+            id : message.id,
+            to : message.from,
+            type : Constants.Type.TEXT_PLAIN,
+            content : welcomingStr
+        };
+
+        var respTime = new Date().getTime() - msgArriveTime;
+
+        self.send(response);
+        dashboard.timing("answer", respTime);
+    });
+
+    var content = message.content;
     if (typeof content == 'object') {
 
         for (var i = 0; i < data[content.personagem].length; i++) {
@@ -103,7 +147,7 @@ function sendTyping(message) {
         }
     }
 
-    this.send(response);
+    self.send(response);
 }
 
 app.listen(port, function () {

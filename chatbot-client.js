@@ -31,32 +31,40 @@ ChatbotClient.prototype.close = function () {
     return this.client.close();
 }
 
-ChatbotClient.prototype.addMessageReceiver = function (option, handler) {
+ChatbotClient.prototype._addReceiver = function (option, handler, type) {
     if (typeof(option) == 'function') {
         handler = option;
         option = true;
     }
 
     var self = this;
-    self.client.addMessageReceiver(option, (message)=>{
-        handler.call(self, message);
-    });
+
+    function receiverCallback(result){
+        handler.call(self, result);
+    }
+
+    if(type == 'message'){
+        self.client.addMessageReceiver(option, receiverCallback);
+    } else {
+        self.client.addNotificationReceiver(option, receiverCallback);
+    }
+
+}
+
+ChatbotClient.prototype.addMessageReceiver = function (option, handler) {
+   this._addReceiver(option, handler, 'message');
 }
 
 ChatbotClient.prototype.addNotificationReceiver = function (option, handler) {
-    if (typeof(option) == 'function') {
-        handler = option;
-        option = true;
-    }
-
-    var self = this;
-    self.client.addNotificationReceiver(option, (notification)=>{
-        handler.call(self, notification);
-    });
+    this._addReceiver(option, handler, 'notification');
 }
 
 ChatbotClient.prototype.send = function(message){
-    this.client.sendMessage(message);
+    return this.client.sendMessage(message);
+}
+
+ChatbotClient.prototype.command = function(message){
+    return this.client.sendCommand(message);
 }
 
 module.exports = ChatbotClient;

@@ -21,11 +21,11 @@ StatsDClient.prototype.increment = function (metric) {
 }
 
 StatsDClient.prototype.decrement = function (metric) {
-    this.client.drecrement(metric);
+    this.client.decrement(metric);
 }
 
 StatsDClient.prototype.timing = function (metric, time) {
-    this.client.timing(metric, time);
+    this.client.timing(metric + ".time", time);
 }
 
 
