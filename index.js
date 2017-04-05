@@ -30,7 +30,7 @@ function onConnect(err, session) {
 function fetchAccount(conversationId){
     var customer = new Customer(conversationId);
     var accountQuery = {
-        id : 1, //TODO: Generate ID
+        id : 1, //TODO: Generate Random ID
         to : "postmaster@" +  customer.getChannel(),
         method: "get",
         uri : "lime://" + customer.getChannel() + "/accounts/" + customer.getId()
@@ -71,6 +71,8 @@ function onMessage(message){
 
         self.send(response);
         dashboard.timing("answer", respTime);
+    }).catch(function(err){
+        console("Error: fetch account returned", err);
     });
 
     var content = message.content;
@@ -95,14 +97,13 @@ function onMessage(message){
     var response = buildResponse(message, step);
     // console.log(response);
 
-    var context = this;
     setTimeout(function () {
-        context.send(response);
+        self.send(response);
     }, 3000)
 
     if (typeof step.nextStep != 'undefined') {
         setTimeout(function () {
-            nextStep(context, message, data, step, 1);
+            nextStep(self, message, data, step, 1);
         }, 6000)
     }
 
