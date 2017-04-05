@@ -1,14 +1,13 @@
 const ChatBotClient = require('./chatbot-client');
 const dotenv = require('dotenv').config();
 const express = require('express');
-const StatsD = require('node-statsd').StatsD;
-
-const statsDClient = new StatsD({host : 'localhost'});
+const StatsDClient = require('./statsd-client');
 
 const client = new ChatBotClient(process.env.BLIP_IDENTIFIER,
-  process.env.BLIP_ACCESSKEY, onConnect);
+                                 process.env.BLIP_ACCESSKEY,onConnect);
 const app = express();
 const port = process.env.PORT || 8080;
+const dashboard = new StatsDClient('gama.chatbot.autoja');
 
 function onConnect(err, session){
     if(err){
@@ -26,7 +25,8 @@ function onNotification(notification){
 }
 
 function onMessage(message){
-    statsDClient.increment('gama.chatbot.autoja.newmessage');
+    dashboard.increment('newmessage');
+
     var content = message.content;
 
     var response = {
@@ -35,7 +35,6 @@ function onMessage(message){
         to : message.from,
         content : content
     }
-
 
     this.send(response);
 }
