@@ -1,5 +1,5 @@
 const ChatBotClient = require('./chatbot-client');
-const Constants = require('./constants')
+const Constants = require('./constants');
 const Customer = require('./customer');
 const dotenv = require('dotenv').config();
 const express = require('express');
@@ -10,6 +10,9 @@ const client = new ChatBotClient(process.env.BLIP_IDENTIFIER,
 const app = express();
 const port = process.env.PORT || 8080;
 const dashboard = new StatsDClient('gama.chatbot.autoja');
+
+var DB = require('./sim-database');
+DB.init();
 
 function onConnect(err, session) {
     if (err) {
@@ -46,6 +49,16 @@ function onMessage(message){
     var self = this;
 
     fetchAccount(message.from).then(function(account) {
+        var acc = DB.getAccount(message.from);
+
+        if(!acc){
+            acc = DB.setAccount(message.from, account);
+            var loan = DB.getLoan(acc.id);
+            var invoices = DB.getInvoices(loan.id);
+
+            console.log(invoices);
+        }
+
         var welcomingStr = "Olá";
         switch (account.resource.gender) {
             case 'male':
@@ -72,7 +85,7 @@ function onMessage(message){
         self.send(response);
         dashboard.timing("answer", respTime);
     }).catch(function(err){
-        console("Error: fetch account returned", err);
+        console.log("Error: fetch account returned", err);
     });
 
     var content = message.content;
