@@ -7,15 +7,15 @@ const ChatBotClient = require('./chatbot-client');
 const Constants = require('./constants')
 const Customer = require('./customer');
 const StatsDClient = require('./statsd-client');
+const Lime = require('lime-js');
 const client = new ChatBotClient(process.env.BLIP_IDENTIFIER,
                                  process.env.BLIP_ACCESSKEY,onConnect);
 const chatbot_utils = new ChatBotUtil();
 const app = express();
-const port = process.env.PORT || 8080;
+const port = process.env.PORT || 8081;
 const dashboard = new StatsDClient('gama.chatbot.autoja');
 const botMessages = yaml.safeLoad(fs.readFileSync('messages.yml', 'utf8'));
 
-console.log(botMessages)
 function onConnect(err, session) {
     if (err) {
         console.log("ERROR: AutoBOT Tilt!", err);
@@ -35,7 +35,7 @@ function onConnect(err, session) {
 function fetchAccount(conversationId){
     var customer = new Customer(conversationId);
     var accountQuery = {
-        id : 1, //TODO: Generate Random ID
+        id : Lime.Guid(), //TODO: Generate Random ID
         to : "postmaster@" +  customer.getChannel(),
         method: "get",
         uri : "lime://" + customer.getChannel() + "/accounts/" + customer.getId()
@@ -44,86 +44,88 @@ function fetchAccount(conversationId){
     return client.command(accountQuery);
 }
 
+const users = []
 function onMessage(message){
     var self = this;
     var msgArriveTime = new Date().getTime();
-    // dashboard.increment('newmessage');
+    dashboard.increment('newmessage');
 
+    // Try get userState from sender
+    var userState = users[message.from];
 
-    // Get Account Info and Send Message!
-    fetchAccount(message.from).then(function(account) {
-        var firstName, prefixName;
-        firstName = account.resource.fullName.match(/^([^\s]+)\s/)[1];
-        switch (account.resource.gender) {
-            case 'male':
-                prefixName = "Sr. ";
-                break;
-            case 'female':
-                prefixName = "Sra. ";
-                break;
-            default:
-                break;
-        }
+    // First time
+    if (userState == undefined) {
+      userState = { state: 'init_conversation',  name: '' }
+      users[message.from] = userState;
+    }
 
-        // Process to send message
-        // If content returns a object like: {personagem: 'kadu', search: 100}
-        previousMessage = message.content
-        if (typeof previousMessage == 'object') {
-            // Get all Personagem conversation
-            for (var i = 0; i < botMessages[previousMessage.personagem].length; i++) {
-              // Check if next path is equal current path
-              if (typeof botMessages[previousMessage.personagem][i].messagePath !== 'undefined'){
-                if (previousMessage.messagePath.next == botMessages[previousMessage.personagem][i].messagePath.current) {
-                  step = botMessages[previousMessage.personagem][i];
+    // Preparing response to the context
+    var response = { id: message.id, to: message.from }
+    // Switch (Navigation tree)
+    switch (userState.state) {
+      case 'init_conversation':
+        // Get Account Info and Send Message!
+        fetchAccount(message.from).then(function(account) {
+          var firstName, prefixName;
+          firstName = account.resource.fullName.match(/^([^\s]+)\s/)[1];
+          switch (account.resource.gender) {
+              case 'male':
+                  prefixName = "Sr. ";
                   break;
-                }
-              }
-            }
-        } else {
-            // Init conversation (select yes or no)
-            step = botMessages.kadu[0];
-            //TODO: Menu to select other options.
+              case 'female':
+                  prefixName = "Sra. ";
+                  break;
+              default:
+                  break;
+          }
+
+          msgBot = botMessages['kadu']['init_conversation']
+          response = buildResponse(message, msgBot)
+
+          users[message.from].state = 'choose'
+          users[message.from].name = prefixName + firstName
+          response.content.text = response.content.text.replace("NOME", users[message.from].name );
+
+          self.send(response)
+        })
+        break;
+      case 'choose':
+        if (!("next_state" in message.content)){
+          users[message.from].state = 'init_conversation'
+          break;
         }
 
-        var response = buildResponse(message, step);
+        state = message.content.next_state
+        msgBot = botMessages['kadu'][state]
+        response = buildResponse(message, msgBot)
+        self.send(response)
 
-        // Set name and prefix.
-        if (typeof response.content.text !== 'undefined'){
-          response.content.text = response.content.text.replace("NOME", prefixName + firstName);
-        }else{
-          response.content = response.content.replace("NOME", prefixName + firstName);
+        if(msgBot.next_state === 'call_lara'){
+
+          // Show current situation
+          msgLaraBot = botMessages['lara'][msgBot.next_state]
+          response = buildResponse(message, msgLaraBot)
+          response.content = response.content.replace("NOME", users[message.from].name );
+          self.send(response)
+
+          // Show plans
+          msgShowPlans = botMessages['lara'][msgLaraBot.next_state]
+          response = buildResponse(message, msgShowPlans)
+          self.send(response)
+
+          // Direct to next route
+          users[message.from].state = msgShowPlans.next_state
         }
-
-
-        setTimeout(function () {
-            self.send(response);
-        }, 3000)
-
-        if (typeof step.messagePath !== undefined && "next_index" in step.messagePath) {
-            setTimeout(function () {
-                nextStep(self, message, botMessages, step, 1);
-            }, 6000)
-        }
-
-        var respTime = new Date().getTime() - msgArriveTime;
-        dashboard.timing("answer", respTime);
-    }).catch(function(err){
-        console.log("Error: fetch account returned", err);
-    });
-
-}
-
-function nextStep(context, message, msgBot, step, count) {
-
-    var newStep = msgBot[step.personagem][step.messagePath.next_index];
-    context.send(buildResponse(message, newStep));
-
-    if ("next_index" in newStep.messagePath) {
-        setTimeout(function () {
-            nextStep(context, message, msgBot, newStep, count + 1);
-        }, 3000 + 3000 * count)
+        break;
+      case 'payment_gateway':
+        // TODO: Pagseguro integration
+        break;
+      default:
+        users[message.from].state = 'init_conversation'
+        break;
     }
 }
+
 
 function buildResponse(message, msgBot) {
     var response = {
@@ -144,8 +146,7 @@ function buildResponse(message, msgBot) {
             // create header item PARAMS: title, text, image_uri
             header = chatbot_utils.createMediaHeader(item.header.title, item.header.text, item.header.image_uri)
             // create item PARAMS: label, value
-            console.log(item.item.text)
-            item = chatbot_utils.createMediaItem(item.item.text, msgBot.messagePath)
+            item = chatbot_utils.createMediaItem(item.item.text, item.item.value)
             // create menu itens PARAMS: itens
             items.push({'header': header, 'options': item})
           }
@@ -155,8 +156,6 @@ function buildResponse(message, msgBot) {
           collection = chatbot_utils.buildCollection(menu)
           response.content = collection.content;
           response.type = collection.type;
-          console.log('collection')
-          console.log(response.content.items[0].options)
           break;
         case 'menu':
           // Create Option item for Menu
@@ -183,11 +182,19 @@ function buildResponse(message, msgBot) {
           break;
     }
 
-    // if (typeof data.options != 'undefined')
-    //     response.options = data.options;
-
     return response;
 }
+
+// function nextStep(context, message, msgBot, step, count) {
+//     var newStep = msgBot[step.personagem][step.messagePath.next_index];
+//     context.send(buildResponse(message, newStep));
+//
+//     if ("next_index" in newStep.messagePath) {
+//         setTimeout(function () {
+//             nextStep(context, message, msgBot, newStep, count + 1);
+//         }, 3000 + 3000 * count)
+//     }
+// }
 
 function sendTyping(message) {
     var response = {
