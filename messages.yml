@@ -2,63 +2,47 @@
 
 kadu:
   # menu
-  - messageType: menu
+  init_conversation:
+    messageType: menu
     menuTitle: 'Oi, NOME! Fico feliz que você veio conversar comigo. Você gostaria de ver as opções que temos para negociar seus pagamentos?'
     menuOptions:
       - order: 1
         optionText: 'Sim'
         value:
-          personagem: 'kadu'
-          messagePath:
-            current: 'init_conversation'
-            next: 'call_lara'
-
+          next_state: inadimplent_choice
       - order: 2
         optionText: 'Não'
         value:
-          personagem: 'kadu'
-          messagePath:
-            current: 'init_conversation'
-            next: 'question'
+          next_state: other_choice
+
 
   # common message if user choose option No
-  - messageType: common_message
+  other_choice:
+    messageType: common_message
     text: "O que posso fazer por você, NOME?"
-    personagem: 'kadu'
-    messagePath:
-      current: 'question'
-      next: 'show_menu'
-      next_index: 0
+    next_state: call_menu
 
   # message to call Lara
-  - messageType: common_message
+  inadimplent_choice:
+    messageType: common_message
     text: 'Que ótimo! \nVou chamar a Lara! Ela será a sua assistente digital para negociações.\n\n @Lara'
-    personagem: 'lara'
-    messagePath:
-      current: 'call_lara'
-      next: 'lara_starts'
-      next_index: 0
+    next_state: call_lara
+
 
 lara:
-  - messageType: common_message
+  call_lara:
+    messageType: common_message
     text: >
-        Oi, João! \nEu sou a Lara e estou aqui para te ajudar em suas negociações. De acordo com sua atual situação: \n
+        Oi, NOME! \nEu sou a Lara e estou aqui para te ajudar em suas negociações. De acordo com sua atual situação: \n
         Valor líquido do financiamento= R$ 31.000,00
         Valor devido: 3 parcelas de R$ 1.140,03 = 3.420,09
         Parcelamento de 1+5 X 578,56
         Forma pagamento: Boleto bancário
         O que nós temos para você é o seguinte:
-    personagem: 'lara'
-    messagePath:
-      current: 'lara_starts'
-      next: 'show_plans'
-      next_index: 1
+    next_state: show_plans
 
-  - messageType: collection
-    personagem: 'lara'
-    messagePath:
-      current: 'show_plans'
-      next: 'payment'
+  show_plans:
+    messageType: collection
     items:
       - header:
           title: 'Pagamento sem juros'
@@ -66,6 +50,8 @@ lara:
           image_uri: 'https://i.forbesimg.com/media/2009/12/16/1216_cash-dollars_650x455.jpg'
         item:
           text: 'Saber mais'
+          value:
+            next_state: payment_gateway_1
 
       - header:
           title: 'Pagamento sem 50% dos juros'
@@ -73,6 +59,8 @@ lara:
           image_uri: 'https://i.forbesimg.com/media/2009/12/16/1216_cash-dollars_650x455.jpg'
         item:
           text: 'Saber mais'
+          value:
+            next_state: payment_gateway_2
 
       - header:
           title: 'Sem juros cumulativos'
@@ -80,3 +68,5 @@ lara:
           image_uri: 'https://i.forbesimg.com/media/2009/12/16/1216_cash-dollars_650x455.jpg'
         item:
           text: 'Saber mais'
+          value:
+            next_state: payment_gateway_3
