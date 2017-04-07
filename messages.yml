@@ -6,14 +6,24 @@
 
 
 kadu:
+  default_message:
+    messageType: common_message
+    text: 'Não entendi o que você falou, caso você queira voltar para o menu, basta dizer: menu'
+    next_state: show_image_kadu
+
   init_conversation:
     messageType: common_message
     text: 'Olá, NOME! Tudo Bem?'
+    next_state: show_image_kadu
+
+  show_image_kadu:
+    messageType: image
+    image_uri: http://imagizer.imageshack.us/a/img922/2360/6vJ1UY.jpg
     next_state: introduce_kadu
 
   introduce_kadu:
     messageType: common_message
-    text: Eu sou o Kadu, seu assistente virtual! Estou aqui para te ajudar!
+    text: Eu sou o Kadu, seu assistente virtual! Estou aqui para te ajudar. Se precisar voltar ao menu, basta digitar: menu
     next_state: menu_help
 
   # menu_help
@@ -31,7 +41,7 @@ kadu:
         value:
           next_state: situation_msg_1
       - order: 3
-        optionText: 'Negociações de inadimplência'
+        optionText: 'Renegociação'
         value:
           next_state: kadu_calls_lara_1
 
@@ -49,7 +59,12 @@ kadu:
   boleto_cpf_undefined:
     messageType: common_message
     text: Ohoh! Não foi possível encontrar seu CPF na nossa base de dados, verifique se seu CPF está correto.
-    next_state: conversation_end
+    next_state: not_possible
+
+  not_possible:
+    messageType: common_message
+    text: Não encontramos seu CPF em nossa base de dados ou ele estava ínvalido. Solicite outra operação!
+    next_state: menu_help
 
   boleto_please_wait:
     messageType: common_message
@@ -75,7 +90,7 @@ kadu:
 
   situation_cpf_undefined:
     messageType: common_message
-    text: Ohoh! Não existe nenhum registro no banco de dados com seu CPF!
+    text: Ohoh! Não existe nenhum registro no banco de dados com seu CPF! Digite novamente.
     next_state: conversation_end
 
   situation_please_wait:
@@ -139,29 +154,6 @@ kadu:
       text: 'Obrigado NOME, nos desculpe e faremos o possível para melhorar.'
       next_state: ''
 
-  # menu
-  # init_conversation:
-  #   messageType: menu
-  #   menuType: quick_reply
-  #   menuTitle: 'Oi, NOME! Fico feliz que você veio conversar comigo. Você gostaria de ver as opções que temos para negociar seus pagamentos?'
-  #   menuOptions:
-  #     - order: 1
-  #       optionText: 'Sim'
-  #       value:
-  #         next_state: inadimplent_choice
-  #     - order: 2
-  #       optionText: 'Não'
-  #       value:
-  #         next_state: other_choice
-
-  #
-  # # common message if user choose option No
-  # other_choice:
-  #   messageType: common_message
-  #   text: "O que posso fazer por você, NOME?"
-  #   next_state: call_menu
-
-
   # message to call Lara
   kadu_calls_lara_1:
     messageType: common_message
@@ -171,7 +163,7 @@ kadu:
   kadu_calls_lara_2:
     messageType: common_message
     text: '@lara'
-    next_state: call_lara
+    next_state: call_lara_image
 
   kadu_thanks:
     messageType: common_message
@@ -179,6 +171,12 @@ kadu:
     next_state: lara_thanks
 
 lara:
+
+  call_lara_image:
+    messageType: image
+    image_uri: http://imagizer.imageshack.us/a/img924/4958/0mVjQQ.jpg
+    next_state: call_lara
+
   call_lara:
     messageType: common_message
     text: 'Oi, NOME! _NL_Eu sou a Lara e estou aqui para te ajudar em suas negociações.'
@@ -196,7 +194,7 @@ lara:
 
   cpf_undefined:
     messageType: common_message
-    text: Ohoh! Não existe nenhum registro no banco de dados com seu CPF!
+    text: Ohoh! Não existe nenhum registro no banco de dados com seu CPF!  Digite novamente.
     next_state: conversation_end
 
   show_situation:
@@ -220,7 +218,7 @@ lara:
       - header:
           title: 'Pagamento sem juros'
           text: 'Ao realizar a quitação do valor devedor total agora ou pelo boleto, você não pagará pelos juros.'
-          image_uri: 'https://i.forbesimg.com/media/2009/12/16/1216_cash-dollars_650x455.jpg'
+          image_uri: 'http://imagizer.imageshack.us/a/img923/9052/MsxWdw.jpg'
         item:
           text: 'Pagar sem juros'
           value:
@@ -229,7 +227,7 @@ lara:
       - header:
           title: 'Pagamento sem 50% dos juros'
           text: 'Ao realizar o pagamento em uma data agendada nos próximos 30 dias você terá 50% de desconto nos juros'
-          image_uri: 'https://i.forbesimg.com/media/2009/12/16/1216_cash-dollars_650x455.jpg'
+          image_uri: 'http://imagizer.imageshack.us/a/img924/5917/2aCeBt.jpg'
         item:
           text: 'Pagar com 50%'
           value:
@@ -238,16 +236,16 @@ lara:
       - header:
           title: 'Sem juros cumulativos'
           text: 'Se realizar o pagamento da primeira fatura devedora agora ou via boleto, as 2 outras faturas param de acumular juros pelo próximos 30 dias consecutivos'
-          image_uri: 'https://i.forbesimg.com/media/2009/12/16/1216_cash-dollars_650x455.jpg'
+          image_uri: 'http://imagizer.imageshack.us/a/img924/8816/OHkMlT.jpg'
         item:
           text: 'Pagar sem juros cumulativos'
           value:
             next_state: payment_gateway_3
 
       - header:
-          title: 'Outras pções'
-          text: ''
-          image_uri: 'https://i.forbesimg.com/media/2009/12/16/1216_cash-dollars_650x455.jpg'
+          title: 'Outras Opções'
+          text: 'Se você precisa de uma negociação mais personalizada, clique aqui!'
+          image_uri: 'http://imagizer.imageshack.us/a/img924/8725/V0an5W.jpg'
         item:
           text: 'Escolher'
           value:
@@ -322,6 +320,11 @@ lara:
   invalid_phone:
     messageType: common_message
     text: 'Digite o número do telefone corretamente EX: (31) 99181-7448'
+    next_state: not_possible_phone
+
+  not_possible_phone:
+    messageType: common_message
+    text: 'Não conseguimos capturar o seu número, escolha outra forma de contato'
     next_state: conversation_end
 
   calling:
