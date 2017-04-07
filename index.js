@@ -49,10 +49,10 @@ function onMessage(message){
     var self = this;
 
     fetchAccount(message.from).then(function(account) {
-        var acc = DB.getAccount(message.from);
+        var acc = DB.getAccountByConversation(message.from);
 
         if(!acc){
-            acc = DB.setAccount(message.from, account);
+            acc = DB.setAccountConversation(message.from, account.resource);
             var loan = DB.getLoan(acc.id);
             var invoices = DB.getInvoices(loan.id);
 
@@ -70,6 +70,8 @@ function onMessage(message){
             default:
                 break;
         }
+
+        console.log(DB.invoices)
 
         var firstName = account.resource.fullName.match(/^([^\s]+)\s/)[1];
         welcomingStr += " " + firstName + ". Tudo bem?";
@@ -168,9 +170,17 @@ app.listen(port, function () {
     console.log('App is running on http://localhost:' + port);
 });
 
+var debtsInterval = setInterval(function () {
 
+    var dueList = DB.getDueInvoiceList();
+    var totalDue = 0;
 
+    for(var i=0; i<dueList.length; i++){
+        totalDue += dueList[i].value;
+    }
 
+    dashboard.gauge("invoices.due.total", totalDue);
+},1000);
 
 
 
