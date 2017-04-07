@@ -32,8 +32,23 @@ kadu:
 lara:
   call_lara:
     messageType: common_message
+    text: 'Oi, NOME! \nEu sou a Lara e estou aqui para te ajudar em suas negociações.'
+    next_state: request_cpf
+
+  request_cpf:
+    messageType: common_message
+    text: 'Ofereço propostas de acordo com a sua situação em nosso sistema e para isso preciso que digite seu CPF, por favor. :D'
+    next_state: validate_cpf
+
+  validate_cpf:
+    messageType: common_message
+    text: 'Ótimo! Só um minutinho, porfavor!'
+    next_state: show_situation
+
+  show_situation:
+    messageType: common_message
     text: >
-        Oi, NOME! \nEu sou a Lara e estou aqui para te ajudar em suas negociações. De acordo com sua atual situação: \n
+        De acordo com sua atual situação: \n
         Valor líquido do financiamento= R$ 31.000,00
         Valor devido: 3 parcelas de R$ 1.140,03 = 3.420,09
         Parcelamento de 1+5 X 578,56
@@ -70,3 +85,21 @@ lara:
           text: 'Saber mais'
           value:
             next_state: payment_gateway_3
+
+  payment_gateway_1:
+    messageType: common_message
+    text: >
+        DEU CERTO KRALIO
+    next_state: show_plans
+
+  payment_gateway_2:
+    messageType: common_message
+    text: >
+        DEU CERTO KRALIO DOIS
+    next_state: show_plans
+
+  payment_gateway_3:
+    messageType: common_message
+    text: >
+        DEU CERTO KRALIO TRÊS
+    next_state: show_plans

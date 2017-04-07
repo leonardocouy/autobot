@@ -59,6 +59,7 @@ function onMessage(message){
       users[message.from] = userState;
     }
 
+    console.log(message)
     // Preparing response to the context
     var response = { id: message.id, to: message.from }
     // Switch (Navigation tree)
@@ -101,23 +102,50 @@ function onMessage(message){
         self.send(response)
 
         if(msgBot.next_state === 'call_lara'){
+          //TODO: Imagem avatar lara
 
-          // Show current situation
+          // Init Lara conversation
           msgLaraBot = botMessages['lara'][msgBot.next_state]
           response = buildResponse(message, msgLaraBot)
           response.content = response.content.replace("NOME", users[message.from].name );
           self.send(response)
 
-          // Show plans
-          msgShowPlans = botMessages['lara'][msgLaraBot.next_state]
-          response = buildResponse(message, msgShowPlans)
+          // Request CPF
+          msgRequestCPF = botMessages['lara'][msgLaraBot.next_state]
+          response = buildResponse(message, msgRequestCPF)
           self.send(response)
 
           // Direct to next route
-          users[message.from].state = msgShowPlans.next_state
+          users[message.from].state = 'get_user_cpf'
         }
         break;
-      case 'payment_gateway':
+      case 'get_user_cpf':
+        // TODO: Validar CPF
+        console.log('implementar')
+        self.send(response)
+        break;
+      case 'payment_options':
+
+        switch(message.content.next_state){
+          case 'payment_gateway_1':
+            msgPayment = botMessages['lara'][message.content.next_state]
+            response = buildResponse(message, msgPayment)
+            self.send(response)
+            break;
+          case 'payment_gateway_2':
+            msgPayment = botMessages['lara'][message.content.next_state]
+            response = buildResponse(message, msgPayment)
+            self.send(response)
+            break;
+          case 'payment_gateway_3':
+            msgPayment = botMessages['lara'][message.content.next_state]
+            response = buildResponse(message, msgPayment)
+            self.send(response)
+            break;
+          default:
+            break;
+        }
+
         // TODO: Pagseguro integration
         break;
       default:
