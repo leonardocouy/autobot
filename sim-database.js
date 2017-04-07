@@ -1,7 +1,7 @@
 /*
-* Simulated Client Database
-*
-* */
+ * Simulated Client Database
+ *
+ * */
 DB = {}
 
 var nextAccount = 0;
@@ -16,7 +16,6 @@ DB.accounts = [
      * */
 ]
 
-
 DB.loans = [
     /**
      *  loans: // financiamentos
@@ -28,7 +27,6 @@ DB.loans = [
      *   - account_id // id do account que fez esse financiamento
      **/
 ]
-
 
 DB.invoices = [
     /*
@@ -42,23 +40,21 @@ DB.invoices = [
 ]
 
 DB.options = {
-    installments : [12, 24, 36],
-    models : [
+    installments: [12, 24, 36],
+    models: [
         {
-            model : "fusca",
-            price : 10000.00
+            model: "fusca",
+            price: 10000.00
         },
 
-
         {
-            model : "brasilia",
-            price : 12000.00
+            model: "brasilia",
+            price: 12000.00
         },
 
-
         {
-            model : "fiat 147",
-            price : 16000.00
+            model: "fiat 147",
+            price: 16000.00
         },
     ]
 }
@@ -68,82 +64,91 @@ function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min)) + min;
 }
 
-function generateAccount(i){
+// geração de uma conta (vazia)
+function generateAccount(i) {
     return {
-        id : i,
-        firstname : "",
+        id: i,
+        firstname: "",
         lastname: "",
-        cpf : "",
-        conversation : ""
+        cpf: "",
+        conversation: ""
     }
 }
 
-function generateLoan(i){
-    var rand1 = getRandomInt(0,2);
-    var rand2 = getRandomInt(0,2);
+// geração de um financiamento pra um determinado cliente
+function generateLoan(i) {
+    var rand1 = getRandomInt(0, 2);
+    var rand2 = getRandomInt(0, 2);
 
     var installments = DB.options.installments[rand1];
-    var model =  DB.options.models[rand2]
+    var model = DB.options.models[rand2]
     var instValue = Math.floor(model.price / installments);
 
     return {
-        id : i,
-        account_id : i,
-        model : model.model,
-        price : model.price,
-        installments : installments,
-        instValue : instValue,
+        id: i,
+        account_id: i,
+        model: model.model,
+        price: model.price,
+        installments: installments,
+        instValue: instValue,q
     }
 }
 
+// geração dos boletos pra um determinado financiamento
 var monthTimeMs = 1000 * 60 * 60 * 24 * 31; // 1000ms * 60s * 60m * 24h * 31d
-function generateInvoice(loanId, invoiceId){
+function generateInvoice(loanId, invoiceId) {
     var now = new Date().getTime();
-    var dueDate = now + (invoiceId-2) * monthTimeMs;
+    var dueDate = now + (invoiceId - 2) * monthTimeMs;
 
-    return   {
-        id : loanId+invoiceId,
-        loan_id : loanId,
-        value : DB.loans[loanId].instValue,
-        number : invoiceId+1,
-        dueDate : dueDate,
-        payed : dueDate  > now ? 0 : getRandomInt(0,1) //0: false, 1:true
+    return {
+        id: loanId + invoiceId,
+        loan_id: loanId,
+        value: DB.loans[loanId].instValue,
+        number: invoiceId + 1,
+        dueDate: dueDate,
+        payed: dueDate > now ? 0 : getRandomInt(0, 1),
+        // payed = 0: false, 1:true
+        renegotiated: 0
     }
 }
 
-DB.init = function(){
-    for (var i=0; i<20; i++){
+// geração dos valores aleatorios do banco.
+DB.init = function () {
+    for (var i = 0; i < 20; i++) {
         var account = generateAccount(i);
         DB.accounts.push(account);
     }
 
-    for (var i=0; i<20; i++){
+    for (var i = 0; i < 20; i++) {
         var loan = generateLoan(i);
         DB.loans.push(loan);
     }
 
-    for (var i=0; i<20; i++){
-        for (var j=0; j<12; j++) {
+    for (var i = 0; i < 20; i++) {
+        for (var j = 0; j < 12; j++) {
             var invoice = generateInvoice(i, j);
             DB.invoices.push(invoice);
         }
     }
 }
 
-//inverted list: conversation -> id
+// inverted list: conversation -> id, cpf -> id
 var accountCache = {};
 var cpfCache = {};
 
-DB.getAccountByConversation = function(conversation){
+// retorna uma conta pelo id da conversa
+DB.getAccountByConversation = function (conversation) {
     return DB.accounts[accountCache[conversation]];
 }
 
-DB.getAccountByCPF = function(cpf){
+// retorna uma conta pelo CPF
+DB.getAccountByCPF = function (cpf) {
     return DB.accounts[cpfCache[cpf]];
 }
 
-DB.setAccountConversation = function(conversation, account){
-    if(accountCache[conversation] != null){
+// grava as infrmações do id da conversa e da própria conta.
+DB.setAccountConversation = function (conversation, account) {
+    if (accountCache[conversation] != null) {
         return accountCache[conversation];
     }
 
@@ -151,8 +156,8 @@ DB.setAccountConversation = function(conversation, account){
 
     acc.conversation = conversation;
 
-    acc.firstname =  account.fullName.match(/^([^\s]+)\s?/)[1];
-    acc.lastname =  account.fullName.match(/^[^\s]+\s?(.*)$/)[1];
+    acc.firstname = account.fullName.match(/^([^\s]+)\s?/)[1];
+    acc.lastname = account.fullName.match(/^[^\s]+\s?(.*)$/)[1];
 
     accountCache[conversation] = acc.id;
     nextAccount++;
@@ -160,9 +165,10 @@ DB.setAccountConversation = function(conversation, account){
     return acc;
 }
 
-DB.setAccountCPF = function(CPF, conversation, account){
+// grava as informações de conta com CPF, id da conversa e a propria conta.s
+DB.setAccountCPF = function (CPF, conversation, account) {
     var account = DB.getAccountByConversation(conversation, account);
-    if (account == null){
+    if (account == null) {
         account = account = DB.setAccountConversation(conversation, account);
     }
 
@@ -172,21 +178,24 @@ DB.setAccountCPF = function(CPF, conversation, account){
     return account;
 }
 
-DB.getLoan = function(accountId){
+// retorna o financiamento de 1 usuário
+DB.getLoan = function (accountId) {
     return DB.loans[accountId];
 }
 
-DB.getInvoices = function(loanId) {
+// lista todos os boletos de 1 financiamento
+DB.getInvoices = function (loanId) {
     var list = [];
-    for(var i=0; i<DB.invoices.length; i++){
-        if(DB.invoices[i].loan_id == loanId){
+    for (var i = 0; i < DB.invoices.length; i++) {
+        if (DB.invoices[i].loan_id == loanId) {
             list.push(DB.invoices[i]);
         }
     }
     return list;
 }
 
-DB.getDueInvoiceList = function(){
+// lista de todos os boletos vencidos não pagos para atualizar o grafico
+DB.getDueInvoiceList = function () {
     var list = [];
 
     var today = new Date().getTime();
@@ -194,8 +203,8 @@ DB.getDueInvoiceList = function(){
     var due = 0;
     var ok = 0;
 
-    for (var i=0; i<DB.invoices.length; i++){
-        if(DB.invoices[i].payed == 0 && DB.invoices[i].dueDate < today){
+    for (var i = 0; i < DB.invoices.length; i++) {
+        if (DB.invoices[i].payed == 0 && DB.invoices[i].dueDate < today) {
             list.push(DB.invoices[i]);
             due += DB.invoices[i].value;
         } else {
