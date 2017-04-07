@@ -86,7 +86,7 @@ kadu:
   situation_report:
     messageType: common_message
     text: >
-        De acordo com sua atual situação: \n
+        De acordo com sua atual situação: _NL_
         Valor líquido do financiamento= R$ 31.000,00
         Valor devido: 3 parcelas de R$ 1.140,03 = 3.420,09
         Parcelamento de 1+5 X 578,56
@@ -181,7 +181,7 @@ kadu:
 lara:
   call_lara:
     messageType: common_message
-    text: 'Oi, NOME! \nEu sou a Lara e estou aqui para te ajudar em suas negociações.'
+    text: 'Oi, NOME! _NL_Eu sou a Lara e estou aqui para te ajudar em suas negociações.'
     next_state: request_cpf
 
   request_cpf:
@@ -202,11 +202,11 @@ lara:
   show_situation:
     messageType: common_message
     text: >
-        De acordo com sua atual situação: \n
-        Valor líquido do financiamento= R$ 31.000,00
-        Valor devido: 3 parcelas de R$ 1.140,03 = 3.420,09
-        Parcelamento de 1+5 X 578,56
-        Forma pagamento: Boleto bancário
+        De acordo com sua atual situação: _NL_
+        Valor líquido do financiamento= R$ 31.000,00 _NL_
+        Valor devido: 3 parcelas de R$ 1.140,03 = 3.420,09 _NL_
+        Parcelamento de 1+5 X 578,56 _NL_
+        Forma pagamento: Boleto bancário _NL_
     next_state: show_plans_message
 
   show_plans_message:
@@ -222,7 +222,7 @@ lara:
           text: 'Ao realizar a quitação do valor devedor total agora ou pelo boleto, você não pagará pelos juros.'
           image_uri: 'https://i.forbesimg.com/media/2009/12/16/1216_cash-dollars_650x455.jpg'
         item:
-          text: 'Escolher'
+          text: 'Pagar sem juros'
           value:
             next_state: payment_gateway_1
 
@@ -231,7 +231,7 @@ lara:
           text: 'Ao realizar o pagamento em uma data agendada nos próximos 30 dias você terá 50% de desconto nos juros'
           image_uri: 'https://i.forbesimg.com/media/2009/12/16/1216_cash-dollars_650x455.jpg'
         item:
-          text: 'Escolher'
+          text: 'Pagar com 50%'
           value:
             next_state: payment_gateway_2
 
@@ -240,7 +240,7 @@ lara:
           text: 'Se realizar o pagamento da primeira fatura devedora agora ou via boleto, as 2 outras faturas param de acumular juros pelo próximos 30 dias consecutivos'
           image_uri: 'https://i.forbesimg.com/media/2009/12/16/1216_cash-dollars_650x455.jpg'
         item:
-          text: 'Escolher'
+          text: 'Pagar sem juros cumulativos'
           value:
             next_state: payment_gateway_3
 
