@@ -1,33 +1,182 @@
 ---
 
+# PREFIXES:
+# - boleto_   -> Fluxo do boleto
+# - situation_ -> Verificar situação
+
+
 kadu:
-  # menu
   init_conversation:
+    messageType: common_message
+    text: 'Olá, NOME! Tudo Bem?'
+    next_state: introduce_kadu
+
+  introduce_kadu:
+    messageType: common_message
+    text: Eu sou o Kadu, seu assistente virtual! Estou aqui para te ajudar!
+    next_state: menu_help
+
+  # menu_help
+  menu_help:
     messageType: menu
-    menuTitle: 'Oi, NOME! Fico feliz que você veio conversar comigo. Você gostaria de ver as opções que temos para negociar seus pagamentos?'
+    menuType: list
+    menuTitle: 'Como posso ajudá-lo?'
+    menuOptions:
+      - order: 1
+        optionText: '2º via do boleto'
+        value:
+          next_state: boleto_msg_1
+      - order: 2
+        optionText: 'Verificar situação'
+        value:
+          next_state: situation_msg_1
+      - order: 3
+        optionText: 'Negociações de inadimplência'
+        value:
+          next_state: kadu_calls_lara_1
+
+  # BOLETO
+  boleto_msg_1:
+    messageType: common_message
+    text: Ok! O bom em conversar comigo é que eu resolvo tudo rapidinho! hahaha
+    next_state: boleto_msg_2
+
+  boleto_msg_2:
+    messageType: question
+    text: Vou gerar um link para seu boleto, para isso preciso que digite seu CPF, por favor. :)
+    next_state: boleto_please_wait
+
+  boleto_cpf_undefined:
+    messageType: common_message
+    text: Ohoh! Não foi possível encontrar seu CPF na nossa base de dados, verifique se seu CPF está correto.
+    next_state: conversation_end
+
+  boleto_please_wait:
+    messageType: common_message
+    text: Ótimo! Só um minutinho, por favor!
+    next_state: boleto_generate_link
+
+  boleto_generate_link:
+    messageType: payment
+    id_payment: 4
+    description: 'Concessionária Auto Já - 2 via do boleto referente ao mês'
+    next_state: conversation_end
+
+  # SITUATION
+  situation_msg_1:
+    messageType: common_message
+    text: Ok! Posso fazer isso mais rápido que a velocidade da luz!
+    next_state: situation_msg_2
+
+  situation_msg_2:
+    messageType: question
+    text: Para verificar sua situação atual, preciso que digite seu CPF, por favor. :)
+    next_state: situation_please_wait
+
+  situation_cpf_undefined:
+    messageType: common_message
+    text: Ohoh! Não existe nenhum registro no banco de dados com seu CPF!
+    next_state: conversation_end
+
+  situation_please_wait:
+    messageType: common_message
+    text: Ótimo! Só um minutinho, por favor!
+    next_state: situation_report
+
+  situation_report:
+    messageType: common_message
+    text: >
+        De acordo com sua atual situação: \n
+        Valor líquido do financiamento= R$ 31.000,00
+        Valor devido: 3 parcelas de R$ 1.140,03 = 3.420,09
+        Parcelamento de 1+5 X 578,56
+        Forma pagamento: Boleto bancário
+        O que nós temos para você é o seguinte:
+    next_state: conversation_end
+
+
+  # conversation end
+  conversation_end:
+    messageType: menu
+    menuType: quick_reply
+    menuTitle: 'Posso ajudar em mais alguma coisa?'
     menuOptions:
       - order: 1
         optionText: 'Sim'
         value:
-          next_state: inadimplent_choice
+          next_state: continue_message
       - order: 2
         optionText: 'Não'
         value:
-          next_state: other_choice
+          next_state: user_satisfaction
 
-
-  # common message if user choose option No
-  other_choice:
+  continue_message:
     messageType: common_message
-    text: "O que posso fazer por você, NOME?"
-    next_state: call_menu
+    text: :D Que ótimo! Ficamos muito felizes em poder te ajudar, vamos lá!
+    next_state: menu_help
+
+  user_satisfaction:
+    messageType: menu
+    menuType: quick_reply
+    menuTitle: 'Você está satisfeito com nossa ajuda?'
+    menuOptions:
+      - order: 1
+        optionText: 'Sim'
+        value:
+          next_state: thanks_message_yes
+      - order: 2
+        optionText: 'Não'
+        value:
+          next_state: thanks_message_no
+
+  thanks_message_yes:
+      messageType: common_message
+      text: 'Muito obrigado NOME, foi uma honra te ajudar!'
+      next_state: ''
+
+  thanks_message_no:
+      messageType: common_message
+      text: 'Obrigado NOME, nos desculpe e faremos o possível para melhorar.'
+      next_state: ''
+
+  # menu
+  # init_conversation:
+  #   messageType: menu
+  #   menuType: quick_reply
+  #   menuTitle: 'Oi, NOME! Fico feliz que você veio conversar comigo. Você gostaria de ver as opções que temos para negociar seus pagamentos?'
+  #   menuOptions:
+  #     - order: 1
+  #       optionText: 'Sim'
+  #       value:
+  #         next_state: inadimplent_choice
+  #     - order: 2
+  #       optionText: 'Não'
+  #       value:
+  #         next_state: other_choice
+
+  #
+  # # common message if user choose option No
+  # other_choice:
+  #   messageType: common_message
+  #   text: "O que posso fazer por você, NOME?"
+  #   next_state: call_menu
+
 
   # message to call Lara
-  inadimplent_choice:
+  kadu_calls_lara_1:
     messageType: common_message
-    text: 'Que ótimo! \nVou chamar a Lara! Ela será a sua assistente digital para negociações.\n\n @Lara'
+    text: 'Certo! Vou chamar a Lara para conversar com você. Ela será a sua assistente digital para negociações.'
+    next_state: kadu_calls_lara_2
+
+  kadu_calls_lara_2:
+    messageType: common_message
+    text: '@lara'
     next_state: call_lara
 
+  kadu_thanks:
+    messageType: common_message
+    text: 'Obrigada por ter ajudado meu amigo, Lara! Você manda muito bem! :D'
+    next_state: lara_thanks
 
 lara:
   call_lara:
@@ -36,7 +185,7 @@ lara:
     next_state: request_cpf
 
   request_cpf:
-    messageType: common_message
+    messageType: question
     text: 'Ofereço propostas de acordo com a sua situação em nosso sistema e para isso preciso que digite seu CPF, por favor. :D'
     next_state: validate_cpf
 
@@ -44,6 +193,11 @@ lara:
     messageType: common_message
     text: 'Ótimo! Só um minutinho, porfavor!'
     next_state: show_situation
+
+  cpf_undefined:
+    messageType: common_message
+    text: Ohoh! Não existe nenhum registro no banco de dados com seu CPF!
+    next_state: conversation_end
 
   show_situation:
     messageType: common_message
@@ -53,7 +207,11 @@ lara:
         Valor devido: 3 parcelas de R$ 1.140,03 = 3.420,09
         Parcelamento de 1+5 X 578,56
         Forma pagamento: Boleto bancário
-        O que nós temos para você é o seguinte:
+    next_state: show_plans_message
+
+  show_plans_message:
+    messageType: common_message
+    text: 'As melhores negociações para você, são:'
     next_state: show_plans
 
   show_plans:
@@ -64,7 +222,7 @@ lara:
           text: 'Ao realizar a quitação do valor devedor total agora ou pelo boleto, você não pagará pelos juros.'
           image_uri: 'https://i.forbesimg.com/media/2009/12/16/1216_cash-dollars_650x455.jpg'
         item:
-          text: 'Saber mais'
+          text: 'Escolher'
           value:
             next_state: payment_gateway_1
 
@@ -73,33 +231,105 @@ lara:
           text: 'Ao realizar o pagamento em uma data agendada nos próximos 30 dias você terá 50% de desconto nos juros'
           image_uri: 'https://i.forbesimg.com/media/2009/12/16/1216_cash-dollars_650x455.jpg'
         item:
-          text: 'Saber mais'
+          text: 'Escolher'
           value:
             next_state: payment_gateway_2
 
       - header:
           title: 'Sem juros cumulativos'
-          text: 'se realizar o pagamento da primeira fatura devedora agora ou via boleto, as 2 outras faturas param de acumular juros pelo próximos 30 dias consecutivos'
+          text: 'Se realizar o pagamento da primeira fatura devedora agora ou via boleto, as 2 outras faturas param de acumular juros pelo próximos 30 dias consecutivos'
           image_uri: 'https://i.forbesimg.com/media/2009/12/16/1216_cash-dollars_650x455.jpg'
         item:
-          text: 'Saber mais'
+          text: 'Escolher'
           value:
             next_state: payment_gateway_3
 
+      - header:
+          title: 'Outras pções'
+          text: ''
+          image_uri: 'https://i.forbesimg.com/media/2009/12/16/1216_cash-dollars_650x455.jpg'
+        item:
+          text: 'Escolher'
+          value:
+            next_state: other_options
+
   payment_gateway_1:
-    messageType: common_message
-    text: >
-        DEU CERTO KRALIO
-    next_state: show_plans
+    messageType: payment
+    id_payment: 1
+    description: 'Concessionária Auto Já - quitação do valor devedor total sem juros.'
+    next_state: negotation_success
 
   payment_gateway_2:
-    messageType: common_message
-    text: >
-        DEU CERTO KRALIO DOIS
-    next_state: show_plans
+    messageType: payment
+    id_payment: 2
+    description: 'Concessionária Auto Já - pagamento em uma data agendada nos próximos 30 dias você terá 50% de desconto nos juros'
+    next_state: negotation_success
 
   payment_gateway_3:
+    messageType: payment
+    id_payment: 3
+    description: 'Concessionária Auto Já - pagamento da primeira fatura e as duas próximas faturas param de acumular juros'
+    next_state: negotation_success
+
+  negotation_success:
     messageType: common_message
-    text: >
-        DEU CERTO KRALIO TRÊS
-    next_state: show_plans
+    text: 'Pague através do link gerado para você e assim que o pagamento for verificado, te enviaremos uma confirmação! Foi ótimo negociar com você, NOME.'
+    next_state: relax_message
+
+  relax_message:
+    messageType: common_message
+    text: 'Como está se sentindo agora, NOME? Mais leve? :D'
+    next_state: kadu_thanks
+
+  lara_thanks:
+    messageType: common_message
+    text: 'Obrigada, Kadu! Meu objetivo é deixar o NOME feliz! :D'
+    next_state: conversation_end
+
+  other_options:
+    messageType: common_message
+    text: 'NOME, Se você precisa de uma negociação mais personalizada, recomendo que entre em contato com um de nossos negociadores físicos.'
+    next_state: choose_other_options
+
+  choose_other_options:
+    messageType: menu
+    menuType: quick_reply
+    menuTitle: 'Como prefere entrar em contato?'
+    menuOptions:
+      - order: 1
+        optionText: 'Ligar'
+        value:
+          next_state: send_number
+      - order: 2
+        optionText: 'Receber ligação'
+        value:
+          next_state: receive_call
+      - order: 3
+        optionText: 'E-mail'
+        value:
+          next_state: email
+
+  send_number:
+    messageType: common_message
+    text: 'Certo! Ligue para (31) 3131-3131.'
+    next_state: conversation_end
+
+  receive_call:
+    messageType: question
+    text: 'Me diga qual é seu número para que possamos ligar'
+    next_state: calling
+
+  invalid_phone:
+    messageType: common_message
+    text: 'Digite o número do telefone corretamente EX: (31) 99181-7448'
+    next_state: conversation_end
+
+  calling:
+    messageType: common_message
+    text: 'Certo! Dentro de alguns minutos você recebera uma ligação de um de nossos negociadores.'
+    next_state: conversation_end
+
+  email:
+    messageType: common_message
+    text: 'Envie um email para: business@autoja.com, você será respondido até no máximo 24 hs.'
+    next_state: conversation_end
