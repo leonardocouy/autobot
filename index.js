@@ -77,6 +77,27 @@ function fetchAccount(conversationId) {
     return client.command(accountQuery);
 }
 
+function sendSequenceResponse(self, responses, to){
+  console.log(to)
+    countDelayReponse = 600;
+
+    for (var i=0; i < responses.length; i++){
+      data = responses[i]
+      self.send({
+          type: "application/vnd.lime.chatstate+json",
+          to: to,
+          content: {
+              "state": "composing"
+          }
+      });
+
+      setTimeout(function() {
+        self.send(data)
+      }, countDelayReponse)
+
+      countDelayReponse = countDelayReponse + 600;
+    };
+}
 const users = []
 function onMessage(message) {
 
@@ -100,7 +121,7 @@ function onMessage(message) {
       if(/menu/i.test(message.content)){
         msgBot = botMessages['kadu']['menu_help']
         response = buildResponse(message, msgBot)
-        sendResponse(self, response)
+        sendResponse(self, response, 600)
         users[message.from].state = 'choose_menu_help'
       }
     }
@@ -132,24 +153,24 @@ function onMessage(message) {
                 response = buildResponse(message, msgBot)
                 users[message.from].name = prefixName + account.firstname
                 response.content = response.content.replace("NOME", users[message.from].name);
-                sendResponse(self, response)
+                sendResponse(self, response, 600)
 
                 if (msgBot.next_state === 'show_image_kadu') {
 
                     // Show Image Kadu
                     msgBot = botMessages['kadu'][msgBot.next_state]
                     response = buildResponse(message, msgBot)
-                    sendResponse(self, response)
+                    sendResponse(self, response, 1200)
 
                     // Introduce Kadu
                     msgBot = botMessages['kadu'][msgBot.next_state]
                     response = buildResponse(message, msgBot)
-                    sendResponse(self, response)
+                    sendResponse(self, response, 2400)
 
                     // Show menu (next_state = menu_help)
                     msgBot = botMessages['kadu'][msgBot.next_state]
                     response = buildResponse(message, msgBot)
-                    sendResponse(self, response)
+                    sendResponse(self, response, 3400)
 
                     users[message.from].state = 'choose_menu_help'
                 }
@@ -174,19 +195,17 @@ function onMessage(message) {
                 break;
             }
 
-            users[message.from].is_userInput = true;
-
             state = message.content.next_state
             msgBot = botMessages['kadu'][state]
             response = buildResponse(message, msgBot)
-            sendResponse(self, response)
+            sendResponse(self, response, 600)
             // 2 via boleto
             if (msgBot.next_state === 'boleto_msg_2') {
 
                 // Boleto request CPF
                 msgBot = botMessages['kadu'][msgBot.next_state]
                 response = buildResponse(message, msgBot)
-                sendResponse(self, response)
+                sendResponse(self, response, 1200)
                 users[message.from].state = 'segunda_via_boleto'
 
             }// Check situation
@@ -194,7 +213,7 @@ function onMessage(message) {
                 // Situation request CPF
                 msgBot = botMessages['kadu'][msgBot.next_state]
                 response = buildResponse(message, msgBot)
-                sendResponse(self, response)
+                sendResponse(self, response, 1200)
 
                 users[message.from].state = 'generate_situation_report'
             }// Negociações de inadimplência
@@ -203,30 +222,30 @@ function onMessage(message) {
                 // Kadu calls lara message 2
                 msgBot = botMessages['kadu'][msgBot.next_state]
                 response = buildResponse(message, msgBot)
-                sendResponse(self, response)
+                sendResponse(self, response, 1200)
 
                 // Call lara image
                 msgLaraBot = botMessages['lara'][msgBot.next_state]
                 response = buildResponse(message, msgLaraBot)
-                sendResponse(self, response)
+                sendResponse(self, response, 2000)
 
                 // Init Lara conversation
                 msgLaraBot = botMessages['lara'][msgLaraBot .next_state]
                 response = buildResponse(message, msgLaraBot)
                 response.content = response.content.replace("NOME", users[message.from].name);
-                sendResponse(self, response)
+                sendResponse(self, response, 2600)
 
                 // Request CPF
                 msgLaraBot = botMessages['lara'][msgLaraBot.next_state]
                 response = buildResponse(message, msgLaraBot)
-                sendResponse(self, response)
+                sendResponse(self, response, 5000)
 
                 // Direct to next route
                 users[message.from].state = 'show_situation_and_plans'
             } else {
                 msgBot = botMessages['kadu'][msgBot.next_state]
                 response = buildResponse(message, msgBot)
-                sendResponse(self, response)
+                sendResponse(self, response, 600)
             }
             break;
         case 'show_situation_and_plans':
@@ -234,7 +253,7 @@ function onMessage(message) {
             if (matchCPF(message)) {
                 msgBot = botMessages['lara']['validate_cpf']
                 response = buildResponse(message, msgBot)
-                sendResponse(self, response)
+                sendResponse(self, response, 1200)
 
                 // Send situation
                 msgBot = botMessages['lara'][msgBot.next_state]
@@ -261,17 +280,17 @@ function onMessage(message) {
                                                                                                                         // 0,056%
                                                                                                                         // fixo.
 
-                sendResponse(self, response)
+                sendResponse(self, response, 3000)
 
                 // Show plans message
                 msgBot = botMessages['lara'][msgBot.next_state]
                 response = buildResponse(message, msgBot)
-                sendResponse(self, response)
+                sendResponse(self, response, 4000)
 
                 // Show plans collection
                 msgBot = botMessages['lara'][msgBot.next_state]
                 response = buildResponse(message, msgBot)
-                sendResponse(self, response)
+                sendResponse(self, response, 6000)
 
                 users[message.from].state = 'choose_plans'
             } else {
@@ -279,20 +298,20 @@ function onMessage(message) {
                 if (users[message.from].cpf_attempts < 3) {
                     msgBot = botMessages['lara']['cpf_undefined']
                     response = buildResponse(message, msgBot)
-                    sendResponse(self, response)
+                    sendResponse(self, response, 600)
                 } else {
                     // Restart conversation
 
                     msgBot = botMessages['kadu']['not_possible']
                     response = buildResponse(message, msgBot)
-                    sendResponse(self, response)
+                    sendResponse(self, response, 300)
 
                     users[message.from].state = 'choose_menu_help';
                     users[message.from].cpf_attempts = 0;
 
                     msgBot = botMessages['kadu'][msgBot.next_state]
                     response = buildResponse(message, msgBot)
-                    sendResponse(self, response)
+                    sendResponse(self, response, 1200)
                 }
             }
 
@@ -303,7 +322,7 @@ function onMessage(message) {
             state = message.content.next_state
             msgBot = botMessages['lara'][state]
             response = buildResponse(message, msgBot)
-
+        
             //Mark all pending as payed
             var acc = DB.getAccountByConversation(message.from);
 
@@ -316,41 +335,42 @@ function onMessage(message) {
                 DB.setPaid(invoices[i].id);
             }
 
-
-            sendResponse(self, response)
+            self.send(response)
 
             if (state !== 'other_options') {
                 // Show negotation success
                 msgBot = botMessages['lara'][msgBot.next_state]
+                // msgBot.content = msgBox.content.replace("NOME", users[message.from].name);
+
                 response = buildResponse(message, msgBot)
-                sendResponse(self, response)
+                sendResponse(self, response, 8000)
 
                 // Show relax message
                 msgBot = botMessages['lara'][msgBot.next_state]
                 response = buildResponse(message, msgBot)
                 response.content = response.content.replace("NOME", users[message.from].name);
-                sendResponse(self, response)
+                sendResponse(self, response, 9000)
 
                 // Thanks Lara
                 msgBot = botMessages['kadu'][msgBot.next_state]
                 response = buildResponse(message, msgBot)
-                sendResponse(self, response)
+                sendResponse(self, response, 11000)
 
                 // Thanks Kadu
                 msgBot = botMessages['lara'][msgBot.next_state]
                 response = buildResponse(message, msgBot)
                 response.content = response.content.replace("NOME", users[message.from].name);
-                sendResponse(self, response)
+                sendResponse(self, response, 14000)
 
                 // Execute the function to end conversation
                 msgBot = botMessages['kadu'][msgBot.next_state]
                 response = conversationEnd(message, msgBot)
-                sendResponse(self, response)
+                sendResponse(self, response, 16000)
             } else {
                 // Choose other options
                 msgBot = botMessages['lara'][msgBot.next_state]
                 response = buildResponse(message, msgBot)
-                sendResponse(self, response)
+                sendResponse(self, response, 600)
                 users[message.from].state = 'other_options'
             }
             // END OF INADIMPLENT FLOW
@@ -360,13 +380,12 @@ function onMessage(message) {
             state = message.content.next_state
             msgBot = botMessages['lara'][state]
             response = buildResponse(message, msgBot)
-            sendResponse(self, response)
+            sendResponse(self, response, 600)
 
             if (state === 'send_number' || state === 'email') {
-
                 msgBot = botMessages['kadu'][msgBot.next_state]
                 response = conversationEnd(message, msgBot)
-                sendResponse(self, response)
+                sendResponse(self, response, 1800)
             } else if (state === 'receive_call') {
                 users[message.from].state = 'get_user_phone'
             }
@@ -378,30 +397,30 @@ function onMessage(message) {
                 // calling
                 msgBot = botMessages['lara']['calling']
                 response = buildResponse(message, msgBot)
-                sendResponse(self, response)
+                sendResponse(self, response, 1200)
 
                 msgBot = botMessages['kadu'][msgBot.next_state]
                 response = conversationEnd(message, msgBot)
-                sendResponse(self, response)
+                sendResponse(self, response, 2000)
             } else {
                 // Warn user 3 times, else direct to init.
                 users[message.from].phone_attempts += 1
                 if (users[message.from].phone_attempts < 3) {
                     msgBot = botMessages['lara']['invalid_phone']
                     response = buildResponse(message, msgBot)
-                    sendResponse(self, response)
+                    sendResponse(self, response, 600)
                 } else {
                     // Restart conversation
                     msgBot = botMessages['lara']['not_possible_phone']
                     response = buildResponse(message, msgBot)
-                    sendResponse(self, response)
+                    sendResponse(self, response, 300)
 
                     users[message.from].state = 'other_options';
                     users[message.from].phone_attempts = 0;
 
                     msgBot = botMessages['lara']['choose_other_options']
                     response = buildResponse(message, msgBot)
-                    sendResponse(self, response)
+                    sendResponse(self, response, 2000)
 
                 }
             }
@@ -410,11 +429,11 @@ function onMessage(message) {
             if (matchCPF(message)) {
                 msgBot = botMessages['kadu']['situation_please_wait']
                 response = buildResponse(message, msgBot)
-                sendResponse(self, response)
+                sendResponse(self, response, 600)
 
                 // Send situation report
                 msgBot = botMessages['kadu'][msgBot.next_state]
-                response = buildResponse(message, msgBot)
+                response = buildResponse(message, msgBot, 1200)
 
                 var acc = DB.getAccountByConversation(message.from);
                 var financ = DB.getLoan(acc.id)
@@ -440,12 +459,12 @@ function onMessage(message) {
                                                                                                                         // 0,056%
                                                                                                                         // fixo.
 
-                sendResponse(self, response)
+                sendResponse(self, response, 1800)
 
                 // Execute the function to end conversation
                 msgBot = botMessages['kadu'][msgBot.next_state]
                 response = conversationEnd(message, msgBot)
-                sendResponse(self, response)
+                sendResponse(self, response, 2400)
 
                 // END OF SITUATION FLOW!!!
             } else {
@@ -453,12 +472,12 @@ function onMessage(message) {
                 if (users[message.from].cpf_attempts < 3) {
                     msgBot = botMessages['kadu']['situation_cpf_undefined']
                     response = buildResponse(message, msgBot)
-                    sendResponse(self, response)
+                    sendResponse(self, response, 600)
                 } else {
                     // Restart conversation
                     msgBot = botMessages['kadu']['not_possible']
                     response = buildResponse(message, msgBot)
-                    sendResponse(self, response)
+                    sendResponse(self, response, 300)
 
                     users[message.from].state = 'choose_menu_help';
                     users[message.from].cpf_attempts = 0;
@@ -471,22 +490,22 @@ function onMessage(message) {
             break;
         case 'segunda_via_boleto':
             if (matchCPF(message)) {
+
                 msgBot = botMessages['kadu']['boleto_please_wait']
                 response = buildResponse(message, msgBot)
-                sendResponse(self, response)
+                sendResponse(self, response, 1200)
 
                 // Generate pagseguro link
+
                 msgBot = botMessages['kadu'][msgBot.next_state]
                 response = buildResponse(message, msgBot)
-                sendResponse(self, response)
-
+                sendResponse(self, response, 1200)
 
                 // Execute the function to end conversation
                 msgBot = botMessages['kadu'][msgBot.next_state]
                 response = conversationEnd(message, msgBot)
-                setTimeout(function(){
-                  sendResponse(self, response)
-                }, 600)
+                sendResponse(self, response, 3500)
+
 
                 // END OF SEGUNDA VIA BOLETO FLOW!!!
             } else {
@@ -494,18 +513,18 @@ function onMessage(message) {
                 if (users[message.from].cpf_attempts < 3) {
                     msgBot = botMessages['kadu']['boleto_cpf_undefined']
                     response = buildResponse(message, msgBot)
-                    sendResponse(self, response)
+                    sendResponse(self, response, 600)
                 } else {
                     // Restart conversation
                     msgBot = botMessages['kadu']['not_possible']
                     response = buildResponse(message, msgBot)
-                    sendResponse(self, response)
+                    sendResponse(self, response, 300)
 
                     users[message.from].state = 'choose_menu_help';
                     users[message.from].cpf_attempts = 0;
 
                     msgBot = botMessages['kadu'][msgBot.next_state]
-                    response = buildResponse(message, msgBot)
+                    response = buildResponse(message, msgBot, 1800)
                     sendResponse(self, response)
 
                 }
@@ -520,21 +539,21 @@ function onMessage(message) {
 
             if (state == 'continue_message') {
                 // Send happy message
-                sendResponse(self, response)
+                sendResponse(self, response, 1200)
 
                 // Show menu
                 msgBot = botMessages['kadu'][msgBot.next_state]
                 response = buildResponse(message, msgBot)
-                sendResponse(self, response)
+                sendResponse(self, response, 1800)
                 users[message.from].state = 'choose_menu_help'
             }else if (state == 'user_satisfaction'){
                 // msgBot = botMessages['kadu'][msgBot.next_state]
                 // response = buildResponse(message, msgBot)
                 // sendResponse(self, response)
                 users[message.from].state = 'thanks_message'
-                sendResponse(self, response)
+                sendResponse(self, response, 1800)
             }else{
-              sendResponse(self, response)
+              sendResponse(self, response, 1800)
             }
             break;
 
@@ -544,7 +563,7 @@ function onMessage(message) {
             msgBot = botMessages['kadu'][state]
             msgBot.text = msgBot.text.replace("NOME", users[message.from].name);
             response = buildResponse(message, msgBot)
-            sendResponse(self, response)
+            sendResponse(self, response, 600)
 
             // Volta ao primeiro estado!
             users[message.from].state = 'init_conversation'
@@ -556,7 +575,7 @@ function onMessage(message) {
 }
 
 var countDelayReponse = 1500;
-function sendResponse(self, data) {
+function sendResponse(self, data, seconds) {
 
     // if (typeof time != 'undefined') {
     // countDelayReponse = 0;
@@ -564,19 +583,20 @@ function sendResponse(self, data) {
     // time = time + (countDelayReponse * 500);
 
 
+    self.send({
+        type: "application/vnd.lime.chatstate+json",
+        to: data.to,
+        content: {
+            "state": "composing"
+        }
+    })
 
     setTimeout(function () {
-        self.send({
-            type: "application/vnd.lime.chatstate+json",
-            to: data.to,
-            content: {
-                "state": "composing"
-            }
-        })
+
 
         self.send(data)
 
-    }, countDelayReponse)
+    }, seconds)
 
     countDelayReponse = countDelayReponse + 750;
 }
