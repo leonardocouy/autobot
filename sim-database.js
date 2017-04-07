@@ -90,7 +90,7 @@ function generateLoan(i) {
         model: model.model,
         price: model.price,
         installments: installments,
-        instValue: instValue,q
+        instValue: instValue,
     }
 }
 
