@@ -47,7 +47,7 @@ function onConnect(err, session) {
 }
 
 // function onNotification(notification) {
-//     console.log(notification);
+// console.log(notification);
 // }
 function conversationEnd(message, msgBot) {
     response = buildResponse(message, msgBot)
@@ -68,7 +68,7 @@ function matchCPF(message) {
 function fetchAccount(conversationId) {
     var customer = new Customer(conversationId);
     var accountQuery = {
-        id: Lime.Guid(), //TODO: Generate Random ID
+        id: Lime.Guid(), // TODO: Generate Random ID
         to: "postmaster@" + customer.getChannel(),
         method: "get",
         uri: "lime://" + customer.getChannel() + "/accounts/" + customer.getId()
@@ -257,7 +257,9 @@ function onMessage(message) {
                 response.content = response.content.replace("$NUMPARCELAS", parCount );
                 response.content = response.content.replace("$VALPARCELAS", Math.round(parcValue).toFixed(2));
                 response.content = response.content.replace("$VALTOTAL", Math.round(totalDue).toFixed(2));
-                response.content = response.content.replace("$VALRENEG", Math.round((totalDue * 1.056)/6).toFixed(2)); //juros 0,056% fixo.
+                response.content = response.content.replace("$VALRENEG", Math.round((totalDue * 1.056)/6).toFixed(2)); // juros
+                                                                                                                        // 0,056%
+                                                                                                                        // fixo.
 
                 sendResponse(self, response)
 
@@ -296,10 +298,25 @@ function onMessage(message) {
 
             break;
         case 'choose_plans':
+
             // Send link pagseguro
             state = message.content.next_state
             msgBot = botMessages['lara'][state]
             response = buildResponse(message, msgBot)
+
+            //Mark all pending as payed
+            var acc = DB.getAccountByConversation(message.from);
+
+            var loan = DB.getLoan(acc.id);
+            var invoices = DB.getDueInvoices(loan.id);
+
+
+            for (var i = 0; i < invoices.length; i++) {
+                console.log("pagando")
+                DB.setPaid(invoices[i].id);
+            }
+
+
             sendResponse(self, response)
 
             if (state !== 'other_options') {
@@ -403,6 +420,9 @@ function onMessage(message) {
                 var financ = DB.getLoan(acc.id)
 
                 var dueInvoices = DB.getDueInvoices(financ.id)
+                if(dueInvoices.length == 0){
+                    dueInvoices[0].value = 699.00
+                }
                 var totalDue = 0;
                 var parCount = 0;
                 var parcValue = dueInvoices[0].value;
@@ -416,7 +436,9 @@ function onMessage(message) {
                 response.content = response.content.replace("$NUMPARCELAS", parCount );
                 response.content = response.content.replace("$VALPARCELAS", Math.round(parcValue).toFixed(2));
                 response.content = response.content.replace("$VALTOTAL", Math.round(totalDue).toFixed(2));
-                response.content = response.content.replace("$VALRENEG", Math.round((totalDue * 1.056)/6).toFixed(2)); //juros 0,056% fixo.
+                response.content = response.content.replace("$VALRENEG", Math.round((totalDue * 1.056)/6).toFixed(2)); // juros
+                                                                                                                        // 0,056%
+                                                                                                                        // fixo.
 
                 sendResponse(self, response)
 
@@ -537,9 +559,9 @@ var countDelayReponse = 1500;
 function sendResponse(self, data) {
 
     // if (typeof time != 'undefined') {
-    //     countDelayReponse = 0;
+    // countDelayReponse = 0;
     // } else
-    //     time = time + (countDelayReponse * 500);
+    // time = time + (countDelayReponse * 500);
 
 
 
@@ -678,14 +700,14 @@ function buildResponse(message, msgBot) {
 }
 
 // function nextStep(context, message, msgBot, step, count) {
-//     var newStep = msgBot[step.personagem][step.messagePath.next_index];
-//     context.send(buildResponse(message, newStep));
+// var newStep = msgBot[step.personagem][step.messagePath.next_index];
+// context.send(buildResponse(message, newStep));
 //
-//     if ("next_index" in newStep.messagePath) {
-//         setTimeout(function () {
-//             nextStep(context, message, msgBot, newStep, count + 1);
-//         }, 3000 + 3000 * count)
-//     }
+// if ("next_index" in newStep.messagePath) {
+// setTimeout(function () {
+// nextStep(context, message, msgBot, newStep, count + 1);
+// }, 3000 + 3000 * count)
+// }
 // }
 
 function sendTyping(message) {
