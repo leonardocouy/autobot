@@ -68,12 +68,29 @@ ChatBotUtil.prototype.buildMediaMenu = function(items){
   };
 
 }
+
 ChatBotUtil.prototype.buildCollection = function(menu){
   return {
     "type": "application/vnd.lime.collection+json",
     "content": menu
   };
 }
+
+ChatBotUtil.prototype.createInputUser = function(text){
+  return {
+    "type": "application/vnd.lime.input+json",
+    "content": {
+        "label": {
+          "type": "text/plain",
+          "value": text
+        },
+        "validation": {
+          "rule": "text"
+        }
+    }
+  }
+}
+
 
 
 module.exports = ChatBotUtil;
