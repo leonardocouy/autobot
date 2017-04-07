@@ -26,11 +26,41 @@ function onConnect(err, session) {
 
     this.addMessageReceiver(sendTyping);
     this.addMessageReceiver(onMessage);
+
+    this.command({
+      "id": Lime.Guid(),
+      "method": "set",
+      "type": "application/vnd.lime.delegation+json",
+      "uri": "/delegations",
+      "resource": {
+        "target": "postmaster@pagseguro.gw.msging.net",
+        "envelopeTypes": [
+          "message"
+        ]
+      }
+    })
+
+
 }
 
 // function onNotification(notification) {
 //     console.log(notification);
 // }
+function conversationEnd(message, msgBot){
+    response = buildResponse(message, msgBot)
+    users[message.from].state = 'conversation_end'
+    return response
+}
+
+function matchCPF(message){
+  CPF_REGEX = /[0-9]{3}\.?[0-9]{3}\.?[0-9]{3}\-?[0-9]{2}/
+  if (message.content.match(CPF_REGEX)){
+    return true;
+  }else{
+    users[message.from].cpf_attempts += 1
+    return false;
+  }
+}
 
 function fetchAccount(conversationId){
     var customer = new Customer(conversationId);
@@ -55,11 +85,10 @@ function onMessage(message){
 
     // First time
     if (userState == undefined) {
-      userState = { state: 'init_conversation',  name: '' }
+      userState = { state: 'init_conversation',  name: '' , cpf_attempts: 0, phone_attempts: 0}
       users[message.from] = userState;
     }
 
-    console.log(message)
     // Preparing response to the context
     var response = { id: message.id, to: message.from }
     // Switch (Navigation tree)
@@ -82,17 +111,28 @@ function onMessage(message){
 
           msgBot = botMessages['kadu']['init_conversation']
           response = buildResponse(message, msgBot)
-
-          users[message.from].state = 'choose'
           users[message.from].name = prefixName + firstName
-          response.content.text = response.content.text.replace("NOME", users[message.from].name );
-
+          response.content = response.content.replace("NOME", users[message.from].name );
           self.send(response)
+
+          if(msgBot.next_state === 'introduce_kadu'){
+            // Introduce Kadu
+            msgBot = botMessages['kadu'][msgBot.next_state]
+            response = buildResponse(message, msgBot)
+            self.send(response)
+
+            // Show menu (next_state = menu_help)
+            msgBot = botMessages['kadu'][msgBot.next_state]
+            response = buildResponse(message, msgBot)
+            self.send(response)
+
+            users[message.from].state = 'choose_menu_help'
+          }
         })
         break;
-      case 'choose':
+      case 'choose_menu_help':
         if (!("next_state" in message.content)){
-          users[message.from].state = 'init_conversation'
+          users[message.from].state = 'choose_menu_help'
           break;
         }
 
@@ -100,10 +140,32 @@ function onMessage(message){
         msgBot = botMessages['kadu'][state]
         response = buildResponse(message, msgBot)
         self.send(response)
+        // 2 via boleto
+        if(msgBot.next_state === 'boleto_msg_2'){
 
-        if(msgBot.next_state === 'call_lara'){
+          // Boleto request CPF
+          msgBot = botMessages['kadu'][msgBot.next_state]
+          response = buildResponse(message, msgBot)
+          self.send(response)
+          users[message.from].state = 'segunda_via_boleto'
+
+        }// Check situation
+        else if(msgBot.next_state === 'situation_msg_2'){
+          // Situation request CPF
+          msgBot = botMessages['kadu'][msgBot.next_state]
+          response = buildResponse(message, msgBot)
+          self.send(response)
+
+          users[message.from].state = 'generate_situation_report'
+        }// Negociações de inadimplência
+        else if(msgBot.next_state === 'kadu_calls_lara_2'){
+
+          // Kadu calls lara message 2
+          msgBot = botMessages['kadu'][msgBot.next_state]
+          response = buildResponse(message, msgBot)
+          self.send(response)
+
           //TODO: Imagem avatar lara
-
           // Init Lara conversation
           msgLaraBot = botMessages['lara'][msgBot.next_state]
           response = buildResponse(message, msgLaraBot)
@@ -111,43 +173,232 @@ function onMessage(message){
           self.send(response)
 
           // Request CPF
-          msgRequestCPF = botMessages['lara'][msgLaraBot.next_state]
-          response = buildResponse(message, msgRequestCPF)
+          msgLaraBot = botMessages['lara'][msgLaraBot.next_state]
+          response = buildResponse(message, msgLaraBot)
           self.send(response)
 
           // Direct to next route
-          users[message.from].state = 'get_user_cpf'
+          users[message.from].state = 'show_situation_and_plans'
+        }else{
+          msgBot = botMessages['kadu'][msgBot.next_state]
+          response = buildResponse(message, msgBot)
+          self.send(response)
         }
         break;
-      case 'get_user_cpf':
-        // TODO: Validar CPF
-        console.log('implementar')
+      case 'show_situation_and_plans':
+        if (matchCPF(message)) {
+          msgBot = botMessages['lara']['validate_cpf']
+          response = buildResponse(message, msgBot)
+          self.send(response)
+
+          // Send situation
+          msgBot = botMessages['lara'][msgBot.next_state]
+          response = buildResponse(message, msgBot)
+          self.send(response)
+
+          // Show plans message
+          msgBot = botMessages['lara'][msgBot.next_state]
+          response = buildResponse(message, msgBot)
+          self.send(response)
+
+          // Show plans collection
+          msgBot = botMessages['lara'][msgBot.next_state]
+          response = buildResponse(message, msgBot)
+          self.send(response)
+
+          users[message.from].state = 'choose_plans'
+        }else{
+          // Warn user 3 times, else direct to init.
+          if (users[message.from].cpf_attempts < 3){
+            msgBot = botMessages['lara']['cpf_undefined']
+            response = buildResponse(message, msgBot)
+            self.send(response)
+          }else{
+            // Restart conversation
+            users[message.from].state = 'init_conversation'
+            users[message.from].cpf_attempts = 0;
+          }
+        }
+
+      break;
+      case 'choose_plans':
+        // Send link pagseguro
+        state = message.content.next_state
+        msgBot = botMessages['lara'][state]
+        response = buildResponse(message, msgBot)
+        response.content = response.content.replace("NOME", users[message.from].name );
         self.send(response)
-        break;
-      case 'payment_options':
 
-        switch(message.content.next_state){
-          case 'payment_gateway_1':
-            msgPayment = botMessages['lara'][message.content.next_state]
-            response = buildResponse(message, msgPayment)
+        if (state !== 'other_options'){
+          // Show negotation success
+          msgBot = botMessages['lara'][msgBot.next_state]
+          response = buildResponse(message, msgBot)
+          self.send(response)
+
+          // Show relax message
+          msgBot = botMessages['lara'][msgBot.next_state]
+          response = buildResponse(message, msgBot)
+          response.content = response.content.replace("NOME", users[message.from].name );
+          self.send(response)
+
+          // Thanks Lara
+          msgBot = botMessages['kadu'][msgBot.next_state]
+          response = buildResponse(message, msgBot)
+          self.send(response)
+
+          // Thanks Kadu
+          msgBot = botMessages['lara'][msgBot.next_state]
+          response = buildResponse(message, msgBot)
+          response.content = response.content.replace("NOME", users[message.from].name );
+          self.send(response)
+
+          // Execute the function to end conversation
+          msgBot = botMessages['kadu'][msgBot.next_state]
+          response = conversationEnd(message, msgBot)
+          self.send(response)
+        }else{
+          // Choose other options
+          msgBot = botMessages['lara'][msgBot.next_state]
+          response = buildResponse(message, msgBot)
+          self.send(response)
+          users[message.from].state = 'other_options'
+        }
+        // END OF INADIMPLENT FLOW
+      break;
+      case 'other_options':
+        // Choose other options
+        state = message.content.next_state
+        msgBot = botMessages['lara'][state]
+        response = buildResponse(message, msgBot)
+        self.send(response)
+
+        if (state === 'send_number' || state === 'email'){
+          msgBot = botMessages['kadu'][msgBot.next_state]
+          response = conversationEnd(message, msgBot)
+          self.send(response)
+        }else if (state === 'receive_call'){
+          users[message.from].state = 'get_user_phone'
+        }
+      break;
+      case 'get_user_phone':
+        PHONE_REGEX = /(\(?\d{2}\)?) ?9?\d{4}-?\d{4}/
+
+        if(message.content.match(PHONE_REGEX)){
+          // calling
+          msgBot = botMessages['lara']['calling']
+          response = buildResponse(message, msgBot)
+          self.send(response)
+
+          msgBot = botMessages['kadu'][msgBot.next_state]
+          response = conversationEnd(message, msgBot)
+          self.send(response)
+        }else{
+          // Warn user 3 times, else direct to init.
+          users[message.from].phone_attempts += 1
+          if (users[message.from].phone_attempts < 3){
+            msgBot = botMessages['lara']['invalid_phone']
+            response = buildResponse(message, msgBot)
             self.send(response)
-            break;
-          case 'payment_gateway_2':
-            msgPayment = botMessages['lara'][message.content.next_state]
-            response = buildResponse(message, msgPayment)
-            self.send(response)
-            break;
-          case 'payment_gateway_3':
-            msgPayment = botMessages['lara'][message.content.next_state]
-            response = buildResponse(message, msgPayment)
-            self.send(response)
-            break;
-          default:
-            break;
+          }else{
+            // Restart conversation
+            users[message.from].state = 'init_conversation'
+            users[message.from].phone_attempts = 0;
+          }
         }
 
-        // TODO: Pagseguro integration
-        break;
+      break;
+      case 'generate_situation_report':
+        if (matchCPF(message)) {
+          msgBot = botMessages['kadu']['situation_please_wait']
+          response = buildResponse(message, msgBot)
+          self.send(response)
+
+          // Send situation report
+          msgBot = botMessages['kadu'][msgBot.next_state]
+          response = buildResponse(message, msgBot)
+          self.send(response)
+
+          // Execute the function to end conversation
+          msgBot = botMessages['kadu'][msgBot.next_state]
+          response = conversationEnd(message, msgBot)
+          self.send(response)
+
+          // END OF SITUATION FLOW!!!
+        }else{
+          // Warn user 3 times, else direct to init.
+          if (users[message.from].cpf_attempts < 3){
+            msgBot = botMessages['kadu']['situation_cpf_undefined']
+            response = buildResponse(message, msgBot)
+            self.send(response)
+          }else{
+            // Restart conversation
+            users[message.from].state = 'init_conversation'
+            users[message.from].cpf_attempts = 0;
+          }
+        }
+      break;
+
+
+      case 'segunda_via_boleto':
+        if (matchCPF(message)) {
+          msgBot = botMessages['kadu']['boleto_please_wait']
+          response = buildResponse(message, msgBot)
+          self.send(response)
+
+          // Generate pagseguro link
+          msgBot = botMessages['kadu'][msgBot.next_state]
+          response = buildResponse(message, msgBot)
+          self.send(response)
+
+          // Execute the function to end conversation
+          msgBot = botMessages['kadu'][msgBot.next_state]
+          response = conversationEnd(message, msgBot)
+          self.send(response)
+
+          // END OF SEGUNDA VIA BOLETO FLOW!!!
+        }else{
+          // Warn user 3 times, else direct to init.
+          if (users[message.from].cpf_attempts < 3){
+            msgBot = botMessages['kadu']['boleto_cpf_undefined']
+            response = buildResponse(message, msgBot)
+            self.send(response)
+          }else{
+            // Restart conversation
+            users[message.from].state = 'init_conversation'
+            users[message.from].cpf_attempts = 0;
+          }
+        }
+      break;
+
+      case 'conversation_end':
+        // Send continue message or user satisfaction
+        state = message.content.next_state
+
+        msgBot = botMessages['kadu'][state]
+        response = buildResponse(message, msgBot)
+        self.send(response)
+
+        if(state == 'continue_message'){
+          users[message.from].state = 'choose_menu_help'
+        }else{
+          msgBot = botMessages['kadu'][msgBot.next_state]
+          response = buildResponse(message, msgBot)
+          self.send(response)
+          users[message.from].state = 'thanks_message'
+        }
+      break;
+
+      case 'thanks_message':
+        // Thanks Message
+        state = message.content.next_state
+        msgBot = botMessages['kadu'][state]
+        response = buildResponse(message, msgBot)
+        response.content = response.content.replace("NOME", users[message.from].name );
+        self.send(response)
+
+        // Volta ao primeiro estado!
+        users[message.from].state = 'init_conversation'
+      break;
       default:
         users[message.from].state = 'init_conversation'
         break;
@@ -196,14 +447,57 @@ function buildResponse(message, msgBot) {
             option_item = chatbot_utils.createOption(option.order, option.optionText, option.value)
             options.push(option_item)
           }
-          // Create Select Menu Params: menuTitle, menuOptions
-          menu = chatbot_utils.buildSelectMenu(msgBot.menuTitle, options)
+          // Create Select Menu Params: menuType, menuTitle, menuOptions
+          menu = chatbot_utils.buildSelectMenu(msgBot.menuType, msgBot.menuTitle, options)
 
           // Pass to response
           response.content = menu.content;
           response.type = menu.type;
           break;
+        case 'question':
+          // PARAM: question
+          userInput = chatbot_utils.getUserInput(msgBot.text)
+          response.content = userInput.content;
+          response.type = userInput.type;
+          break;
+        case 'payment':
+          // Set permission to send payment
 
+          price = 0
+          date_dueTo = new Date();
+          switch(msgBot.id_payment){
+            // payment_gateway_1
+            case 1:
+              price = 500
+              date_dueTo.setDate(date_dueTo.getDate() + 1)
+            break;
+            // payment_gateway_2
+            case 2:
+              price = 700
+              date_dueTo.setDate(date_dueTo.getDate() + 30)
+            break;
+            // payment_gateway_3
+            case 3:
+              price = 900
+              date_dueTo.setDate(date_dueTo.getDate() + 1)
+            // boleto_generate_link
+            case 4:
+              price = 200
+              date_dueTo.setDate(date_dueTo.getDate() + 30)
+            break;
+            default:
+              break;
+          }
+
+          // Params: messenger_id, price, description, dueTo_date
+          messenger_id = message.from.split("@")[0]
+          payment = chatbot_utils.createPayment(price, msgBot.description, date_dueTo)
+
+          response.id = "1"
+          response.to = messenger_id + "%40messenger.gw.msging.net@pagseguro.gw.msging.net",
+          response.content = payment.content;
+          response.type = payment.type;
+          break;
         default:
           response.content = msgBot.content;
           response.type = msgBot.type;
@@ -239,170 +533,3 @@ function sendTyping(message) {
 app.listen(port, function () {
     console.log('App is running on http://localhost:' + port);
 });
-
-
-
-
-
-//
-//
-//
-// var data = {
-//         'kadu': [
-//             {
-//                 'search': 'Começar',
-//                 'content': {
-//                     'text': 'Oi, João! Fico feliz que você veio conversar comigo. Você gostaria de ver as opções que temos para negociar seus pagamentos?',
-//                     "options": [
-//                         {
-//                             "order": 1,
-//                             "text": "Sim",
-//                             "type": "application/json",
-//                             "value": {
-//                                 "personagem": "kadu",
-//                                 "search": 100
-//                             }
-//                         },
-//                         {
-//                             "order": 2,
-//                             "text": "Não",
-//                             "type": "application/json",
-//                             "value": {
-//                                 "personagem": "kadu",
-//                                 "search": 200
-//                             }
-//                         }
-//                     ]
-//                 },
-//                 'type': "application/vnd.lime.select+json"
-//
-//
-//             },
-//             {
-//                 'search': 100,
-//                 'content': 'Que ótimo! \nVou chamar a Lara! Ela será a sua assistente digital para negociações.\n\n @Lara',
-//                 'type': "text/plain",
-//                 'nextStep': {
-//                     "personagem": "lara",
-//                     "index": 0
-//                 }
-//             }
-//             ,
-//             {
-//                 'search': 200,
-//                 'content': 'O que posso fazer por você Jõao?',
-//                 'type': "text/plain"
-//             }
-//
-//         ],
-//         'lara': [
-//             {
-//                 // 'search': 100,
-//                 'content': 'Oi, João! \nEu sou a Lara e estou aqui para te ajudar em suas negociações. De acordo com sua atual situação: \n\n' +
-//                 'Valor líquido do financiamento= R$ 31.000,00\n' +
-//                 'Valor devido: 3 parcelas de R$ 1.140,03 = 3.420,09\n' +
-//                 'Parcelamento de 1+5 X 578,56\n' +
-//                 'Forma pagamento: Boleto bancário\n' +
-//                 '\nO que nós temos para você é o seguinte:',
-//                 'type': "text/plain",
-//                 'nextStep': {
-//                     "personagem": "lara",
-//                     "index": 1
-//                 }
-//             },
-//             {
-//                 // 'search': 101,
-//                 'content': {
-//                     "itemType": "application/vnd.lime.document-select+json",
-//                     "items": [
-//                         {
-//                             "header": {
-//                                 "type": "application/vnd.lime.media-link+json",
-//                                 "value": {
-//                                     "title": "Pagamento sem juros",
-//                                     "text": "Ao realizar a quitação do valor devedor total agora ou pelo boleto, você não pagará pelos juros",
-//                                     "type": "image/jpeg",
-//                                     "uri": "https://i.forbesimg.com/media/2009/12/16/1216_cash-dollars_650x455.jpg"
-//                                 }
-//                             },
-//                             "options": [
-//                                 {
-//                                     "label": {
-//                                         "type": "text/plain",
-//                                         "value": "Saber mais"
-//                                     },
-//                                     "value": {
-//                                         "type": "application/json",
-//                                         "value": {
-//                                             "personagem": "lara",
-//                                             "search": 101
-//                                         }
-//                                     }
-//                                 }
-//                             ]
-//                         },
-//                         {
-//                             "header": {
-//                                 "type": "application/vnd.lime.media-link+json",
-//                                 "value": {
-//                                     "title": "Pagamento sem 50% dos juros",
-//                                     "text": "Ao realizar o pagamento em uma data agendada nos próximos 30 dias você terá 50% de desconto nos juros",
-//                                     "type": "image/jpeg",
-//                                     "uri": "https://i.forbesimg.com/media/2009/12/16/1216_cash-dollars_650x455.jpg"
-//                                 }
-//                             },
-//                             "options": [
-//                                 {
-//                                     "label": {
-//                                         "type": "text/plain",
-//                                         "value": "Saber mais"
-//                                     },
-//                                     "value": {
-//                                         "type": "application/json",
-//                                         "value": {
-//                                             "personagem": "lara",
-//                                             "search": 102
-//                                         }
-//                                     }
-//                                 }
-//                             ]
-//                         },
-//                         {
-//                             "header": {
-//                                 "type": "application/vnd.lime.media-link+json",
-//                                 "value": {
-//                                     "title": "Sem juros cumulativos",
-//                                     "text": "se realizar o pagamento da primeira fatura devedora agora ou via boleto, as 2 outras faturas param de acumular juros pelo próximos 30 dias consecutivos",
-//                                     "type": "image/jpeg",
-//                                     "uri": "https://i.forbesimg.com/media/2009/12/16/1216_cash-dollars_650x455.jpg"
-//                                 }
-//                             },
-//                             "options": [
-//                                 {
-//                                     "label": {
-//                                         "type": "text/plain",
-//                                         "value": "Saber mais"
-//                                     },
-//                                     "value": {
-//                                         "type": "application/json",
-//                                         "value": {
-//                                             "personagem": "lara",
-//                                             "search": 103
-//                                         }
-//                                     }
-//                                 }
-//                             ]
-//                         }
-//                     ]
-//                 },
-//                 'type': "application/vnd.lime.collection+json",
-//                 // 'nextStep': {
-//                 //     "personagem": "lara",
-//                 //     "key2": 100
-//                 // }
-//
-//             },
-//
-//         ]
-//     }
-// ;
