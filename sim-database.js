@@ -107,7 +107,7 @@ function generateInvoice(loanId, invoiceId) {
         value: DB.loans[loanId].instValue,
         number: invoiceId + 1,
         dueDate: dueDate,
-        payed: dueDate > now ? 0 : (getRandomInt(1, 10) == 1 ? 0 : 1),
+        payed: dueDate > now ? 0 : (getRandomInt(1, 10) <= 2 ? 0 : 1),
         // payed = 0: false, 1:true
         renegotiated: 0
     }
@@ -115,17 +115,17 @@ function generateInvoice(loanId, invoiceId) {
 
 // geração dos valores aleatorios do banco.
 DB.init = function () {
-    for (var i = 0; i < 100; i++) {
+    for (var i = 0; i < 20; i++) {
         var account = generateAccount(i);
         DB.accounts.push(account);
     }
 
-    for (var i = 0; i < 100; i++) {
+    for (var i = 0; i < 20; i++) {
         var loan = generateLoan(i);
         DB.loans.push(loan);
     }
 
-    for (var i = 0; i < 100; i++) {
+    for (var i = 0; i < 20; i++) {
         for (var j = 0; j < 12; j++) {
             var invoice = generateInvoice(i, j);
             DB.invoices.push(invoice);
@@ -198,15 +198,21 @@ DB.getInvoices = function (loanId) {
 
 // lista todos os boletos vencidos de 1 financiamento
 DB.getDueInvoices = function (loanId) {
+    console.log("1")
     var invoices = DB.getInvoices(loanId);
+    console.log("2")
     var due = [];
 
     var today = new Date().getTime();
     for (var i = 0; i < invoices.length; i++) {
-        if (invoices[i].dueDate < today) {
+        console.log("3")
+        if (invoices[i].payed == 0 && invoices[i].dueDate < today) {
+            console.log("4")
             due.push(invoices[i]);
         }
     }
+
+    console.log("5")
 
     return due;
 }
@@ -231,12 +237,12 @@ DB.getDueClientsCount = function () {
 
     var today = new Date().getTime();
 
-    for(var i=0; i<DB.accounts.length; i++){
+    for (var i = 0; i < DB.accounts.length; i++) {
         var loan = DB.getLoan(DB.accounts[i].id);
         var invoices = DB.getInvoices(loan.id);
 
-        for(var j=0; j<invoices.length; j++){
-            if(invoices[j].payed == 0 && invoices[j].dueDate < today){
+        for (var j = 0; j < invoices.length; j++) {
+            if (invoices[j].payed == 0 && invoices[j].dueDate < today) {
                 count++;
                 break;
             }
@@ -244,6 +250,10 @@ DB.getDueClientsCount = function () {
     }
 
     return count;
+}
+
+DB.setPaid = function (invoiceId) {
+    DB.invoices[invoiceId].payed = true;
 }
 
 module.exports = DB;
