@@ -85,6 +85,7 @@ function onMessage(message) {
     var msgArriveTime = new Date().getTime();
     dashboard.increment('newmessage');
 
+
     // Try get userState from sender
     var userState = users[message.from];
 
@@ -92,7 +93,16 @@ function onMessage(message) {
     if (userState == undefined) {
         userState = {state: 'init_conversation', name: '', cpf_attempts: 0, phone_attempts: 0}
         users[message.from] = userState;
+    }else{
+      if(/menu/i.test(message.content)){
+        msgBot = botMessages['kadu']['menu_help']
+        response = buildResponse(message, msgBot)
+        sendResponse(self, response)
+        users[message.from].state = 'choose_menu_help'
+      }
     }
+
+
 
     // Preparing response to the context
     var response = {id: message.id, to: message.from}
@@ -120,7 +130,13 @@ function onMessage(message) {
                 response.content = response.content.replace("NOME", users[message.from].name);
                 sendResponse(self, response)
 
-                if (msgBot.next_state === 'introduce_kadu') {
+                if (msgBot.next_state === 'show_image_kadu') {
+
+                    // Show Image Kadu
+                    msgBot = botMessages['kadu'][msgBot.next_state]
+                    response = buildResponse(message, msgBot)
+                    sendResponse(self, response)
+
                     // Introduce Kadu
                     msgBot = botMessages['kadu'][msgBot.next_state]
                     response = buildResponse(message, msgBot)
@@ -140,6 +156,8 @@ function onMessage(message) {
                 users[message.from].state = 'choose_menu_help'
                 break;
             }
+
+            users[message.from].is_userInput = true;
 
             state = message.content.next_state
             msgBot = botMessages['kadu'][state]
@@ -170,9 +188,13 @@ function onMessage(message) {
                 response = buildResponse(message, msgBot)
                 sendResponse(self, response)
 
-                //TODO: Imagem avatar lara
-                // Init Lara conversation
+                // Call lara image
                 msgLaraBot = botMessages['lara'][msgBot.next_state]
+                response = buildResponse(message, msgLaraBot)
+                sendResponse(self, response)
+
+                // Init Lara conversation
+                msgLaraBot = botMessages['lara'][msgLaraBot .next_state]
                 response = buildResponse(message, msgLaraBot)
                 response.content = response.content.replace("NOME", users[message.from].name);
                 sendResponse(self, response)
@@ -191,6 +213,7 @@ function onMessage(message) {
             }
             break;
         case 'show_situation_and_plans':
+
             if (matchCPF(message)) {
                 msgBot = botMessages['lara']['validate_cpf']
                 response = buildResponse(message, msgBot)
@@ -220,8 +243,17 @@ function onMessage(message) {
                     sendResponse(self, response)
                 } else {
                     // Restart conversation
-                    users[message.from].state = 'init_conversation'
+
+                    msgBot = botMessages['kadu']['not_possible']
+                    response = buildResponse(message, msgBot)
+                    sendResponse(self, response)
+
+                    users[message.from].state = 'choose_menu_help';
                     users[message.from].cpf_attempts = 0;
+
+                    msgBot = botMessages['kadu'][msgBot.next_state]
+                    response = buildResponse(message, msgBot)
+                    sendResponse(self, response)
                 }
             }
 
@@ -231,7 +263,6 @@ function onMessage(message) {
             state = message.content.next_state
             msgBot = botMessages['lara'][state]
             response = buildResponse(message, msgBot)
-            response.content = response.content.replace("NOME", users[message.from].name);
             sendResponse(self, response)
 
             if (state !== 'other_options') {
@@ -278,6 +309,7 @@ function onMessage(message) {
             sendResponse(self, response)
 
             if (state === 'send_number' || state === 'email') {
+
                 msgBot = botMessages['kadu'][msgBot.next_state]
                 response = conversationEnd(message, msgBot)
                 sendResponse(self, response)
@@ -306,8 +338,17 @@ function onMessage(message) {
                     sendResponse(self, response)
                 } else {
                     // Restart conversation
-                    users[message.from].state = 'init_conversation'
+                    msgBot = botMessages['lara']['not_possible_phone']
+                    response = buildResponse(message, msgBot)
+                    sendResponse(self, response)
+
+                    users[message.from].state = 'other_options';
                     users[message.from].phone_attempts = 0;
+
+                    msgBot = botMessages['lara']['choose_other_options']
+                    response = buildResponse(message, msgBot)
+                    sendResponse(self, response)
+
                 }
             }
 
@@ -337,8 +378,16 @@ function onMessage(message) {
                     sendResponse(self, response)
                 } else {
                     // Restart conversation
-                    users[message.from].state = 'init_conversation'
+                    msgBot = botMessages['kadu']['not_possible']
+                    response = buildResponse(message, msgBot)
+                    sendResponse(self, response)
+
+                    users[message.from].state = 'choose_menu_help';
                     users[message.from].cpf_attempts = 0;
+
+                    msgBot = botMessages['kadu'][msgBot.next_state]
+                    response = buildResponse(message, msgBot)
+                    sendResponse(self, response)
                 }
             }
             break;
@@ -355,10 +404,13 @@ function onMessage(message) {
                 response = buildResponse(message, msgBot)
                 sendResponse(self, response)
 
+
                 // Execute the function to end conversation
                 msgBot = botMessages['kadu'][msgBot.next_state]
                 response = conversationEnd(message, msgBot)
-                sendResponse(self, response)
+                setTimeout(function(){
+                  sendResponse(self, response)
+                }, 600)
 
                 // END OF SEGUNDA VIA BOLETO FLOW!!!
             } else {
@@ -369,8 +421,17 @@ function onMessage(message) {
                     sendResponse(self, response)
                 } else {
                     // Restart conversation
-                    users[message.from].state = 'init_conversation'
+                    msgBot = botMessages['kadu']['not_possible']
+                    response = buildResponse(message, msgBot)
+                    sendResponse(self, response)
+
+                    users[message.from].state = 'choose_menu_help';
                     users[message.from].cpf_attempts = 0;
+
+                    msgBot = botMessages['kadu'][msgBot.next_state]
+                    response = buildResponse(message, msgBot)
+                    sendResponse(self, response)
+
                 }
             }
             break;
@@ -378,18 +439,26 @@ function onMessage(message) {
         case 'conversation_end':
             // Send continue message or user satisfaction
             state = message.content.next_state
-
             msgBot = botMessages['kadu'][state]
             response = buildResponse(message, msgBot)
-            sendResponse(self, response)
 
             if (state == 'continue_message') {
-                users[message.from].state = 'choose_menu_help'
-            } else {
+                // Send happy message
+                sendResponse(self, response)
+
+                // Show menu
                 msgBot = botMessages['kadu'][msgBot.next_state]
                 response = buildResponse(message, msgBot)
                 sendResponse(self, response)
+                users[message.from].state = 'choose_menu_help'
+            }else if (state == 'user_satisfaction'){
+                // msgBot = botMessages['kadu'][msgBot.next_state]
+                // response = buildResponse(message, msgBot)
+                // sendResponse(self, response)
                 users[message.from].state = 'thanks_message'
+                sendResponse(self, response)
+            }else{
+              sendResponse(self, response)
             }
             break;
 
@@ -397,8 +466,8 @@ function onMessage(message) {
             // Thanks Message
             state = message.content.next_state
             msgBot = botMessages['kadu'][state]
+            msgBot.text = msgBot.text.replace("NOME", users[message.from].name);
             response = buildResponse(message, msgBot)
-            response.content = response.content.replace("NOME", users[message.from].name);
             sendResponse(self, response)
 
             // Volta ao primeiro estado!
@@ -452,11 +521,9 @@ function buildResponse(message, msgBot) {
         case 'common_message':
             console.log('-------------------------')
             console.log(msgBot.text);
-            // console.log('-------------------------')
-
 
             response.content = replaceNewLine(msgBot.text)
-
+            response.next_state = msgBot.next_state
             response.type = Constants.Type.TEXT_PLAIN;
             break;
         case 'collection':
@@ -495,6 +562,12 @@ function buildResponse(message, msgBot) {
             // Pass to response
             response.content = menu.content;
             response.type = menu.type;
+            break;
+        case 'image':
+            // PARAM: image_uri
+            image = chatbot_utils.createImage(msgBot.image_uri)
+            response.content = image.content;
+            response.type = image.type;
             break;
         case 'question':
             // PARAM: question
@@ -536,8 +609,9 @@ function buildResponse(message, msgBot) {
             payment = chatbot_utils.createPayment(price, msgBot.description, date_dueTo)
 
             response.id = "1"
+            response.next_state = msgBot.next_state
             response.to = messenger_id + "%40messenger.gw.msging.net@pagseguro.gw.msging.net",
-                response.content = payment.content;
+            response.content = payment.content;
             response.type = payment.type;
             break;
         default:

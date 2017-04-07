@@ -35,7 +35,7 @@ ChatBotUtil.prototype.buildSelectMenu = function (menu_type, title, options) {
     }
 
     if (menu_type === 'quick_reply') {
-        response.scope = 'immediate'
+        response.content.scope = 'immediate'
     }
 
     return response;
@@ -135,13 +135,13 @@ ChatBotUtil.prototype.getUserInput = function (question) {
 }
 
 
-ChatBotUtil.prototype.createImage = function (image, type) {
+ChatBotUtil.prototype.createImage = function (image) {
     return {
         "type": "application/vnd.lime.media-link+json",
         "content": {
             // "title": "Gato",
             // "text": "Segue uma imagem de um gato",
-            "type": type,
+            "type": "image/jpeg",
             // "type": "image/jpeg",
             "uri": image,
             // "size": 227791,
