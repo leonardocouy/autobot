@@ -100,13 +100,14 @@ function onMessage(message) {
     // Preparing response to the context
     var response = {id: message.id, to: message.from}
     // Switch (Navigation tree)
+
     switch (userState.state) {
         case 'init_conversation':
             // Get Account Info and Send Message!
-            fetchAccount(message.from).then(function (account) {
-                var firstName, prefixName;
-                firstName = account.resource.fullName.match(/^([^\s]+)\s/)[1];
-                switch (account.resource.gender) {
+            function gotAccount(account) {
+                var prefixName;
+
+                switch (account.gender) {
                     case 'male':
                         prefixName = "Sr. ";
                         break;
@@ -119,7 +120,7 @@ function onMessage(message) {
 
                 msgBot = botMessages['kadu']['init_conversation']
                 response = buildResponse(message, msgBot)
-                users[message.from].name = prefixName + firstName
+                users[message.from].name = prefixName + account.firstname
                 response.content = response.content.replace("NOME", users[message.from].name);
                 sendResponse(self, response)
 
@@ -136,7 +137,20 @@ function onMessage(message) {
 
                     users[message.from].state = 'choose_menu_help'
                 }
-            })
+            }
+
+            // Get Account Info and Send Message!
+            var acc = DB.getAccountByConversation(message.from);
+            if(acc != null){
+                gotAccount(acc);
+            } else {
+                fetchAccount(message.from).then(function(account){
+                    acc = DB.setAccountConversation(message.from, account.resource);
+                    gotAccount(acc);
+                }).catch(function(err){
+                    console.log("Não foi possível buscar a conta", err)
+                });
+            }
             break;
         case 'choose_menu_help':
             if (!("next_state" in message.content)) {
@@ -202,6 +216,26 @@ function onMessage(message) {
                 // Send situation
                 msgBot = botMessages['lara'][msgBot.next_state]
                 response = buildResponse(message, msgBot)
+
+                var acc = DB.getAccountByConversation(message.from);
+                var financ = DB.getLoan(acc.id)
+
+                var dueInvoices = DB.getDueInvoices(financ.id)
+                var totalDue = 0;
+                var parCount = 0;
+                var parcValue = dueInvoices[0].value;
+
+                for(var i = 0; i < dueInvoices.length; i++){
+                    totalDue += dueInvoices[i].value;
+                    parCount ++;
+                }
+
+                response.content = response.content.replace("$FINANCTOTAL", Math.round(financ.price).toFixed(2));
+                response.content = response.content.replace("$NUMPARCELAS", parCount );
+                response.content = response.content.replace("$VALPARCELAS", Math.round(parcValue).toFixed(2));
+                response.content = response.content.replace("$VALTOTAL", Math.round(totalDue).toFixed(2));
+                response.content = response.content.replace("$VALRENEG", Math.round((totalDue * 1.056)/6).toFixed(2)); //juros 0,056% fixo.
+
                 sendResponse(self, response)
 
                 // Show plans message
@@ -313,7 +347,6 @@ function onMessage(message) {
                     users[message.from].phone_attempts = 0;
                 }
             }
-
             break;
         case 'generate_situation_report':
             if (matchCPF(message)) {
@@ -324,6 +357,26 @@ function onMessage(message) {
                 // Send situation report
                 msgBot = botMessages['kadu'][msgBot.next_state]
                 response = buildResponse(message, msgBot)
+
+                var acc = DB.getAccountByConversation(message.from);
+                var financ = DB.getLoan(acc.id)
+
+                var dueInvoices = DB.getDueInvoices(financ.id)
+                var totalDue = 0;
+                var parCount = 0;
+                var parcValue = dueInvoices[0].value;
+
+                for(var i = 0; i < dueInvoices.length; i++){
+                    totalDue += dueInvoices[i].value;
+                    parCount ++;
+                }
+
+                response.content = response.content.replace("$FINANCTOTAL", Math.round(financ.price).toFixed(2));
+                response.content = response.content.replace("$NUMPARCELAS", parCount );
+                response.content = response.content.replace("$VALPARCELAS", Math.round(parcValue).toFixed(2));
+                response.content = response.content.replace("$VALTOTAL", Math.round(totalDue).toFixed(2));
+                response.content = response.content.replace("$VALRENEG", Math.round((totalDue * 1.056)/6).toFixed(2)); //juros 0,056% fixo.
+
                 sendResponse(self, response)
 
                 // Execute the function to end conversation
@@ -345,8 +398,6 @@ function onMessage(message) {
                 }
             }
             break;
-
-
         case 'segunda_via_boleto':
             if (matchCPF(message)) {
                 msgBot = botMessages['kadu']['boleto_please_wait']
@@ -579,7 +630,7 @@ app.listen(port, function () {
     console.log('App is running on http://localhost:' + port);
 });
 
-var debtsInterval = setInterval(function () {
+var statistics = setInterval(function () {
     var dueList = DB.getDueInvoiceList();
     var totalDue = 0;
 
@@ -588,4 +639,11 @@ var debtsInterval = setInterval(function () {
     }
 
     dashboard.gauge("invoices.due.total", totalDue);
-},1000);
+
+    var dueCout = DB.getDueClientsCount();
+    dashboard.gauge("invoices.due.count", dueCout);
+
+    var okCount = (DB.accounts.length - dueCout);
+    dashboard.gauge("invoices.ok.count", okCount);
+
+}, 2000);

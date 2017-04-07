@@ -71,6 +71,7 @@ function generateAccount(i) {
         firstname: "",
         lastname: "",
         cpf: "",
+        gender: "",
         conversation: ""
     }
 }
@@ -98,7 +99,7 @@ function generateLoan(i) {
 var monthTimeMs = 1000 * 60 * 60 * 24 * 31; // 1000ms * 60s * 60m * 24h * 31d
 function generateInvoice(loanId, invoiceId) {
     var now = new Date().getTime();
-    var dueDate = now + (invoiceId - 2) * monthTimeMs;
+    var dueDate = now + (invoiceId - 3) * monthTimeMs;
 
     return {
         id: loanId + invoiceId,
@@ -106,7 +107,7 @@ function generateInvoice(loanId, invoiceId) {
         value: DB.loans[loanId].instValue,
         number: invoiceId + 1,
         dueDate: dueDate,
-        payed: dueDate > now ? 0 : getRandomInt(0, 1),
+        payed: dueDate > now ? 0 : (getRandomInt(1, 10) == 1 ? 0 : 1),
         // payed = 0: false, 1:true
         renegotiated: 0
     }
@@ -114,17 +115,17 @@ function generateInvoice(loanId, invoiceId) {
 
 // geração dos valores aleatorios do banco.
 DB.init = function () {
-    for (var i = 0; i < 20; i++) {
+    for (var i = 0; i < 100; i++) {
         var account = generateAccount(i);
         DB.accounts.push(account);
     }
 
-    for (var i = 0; i < 20; i++) {
+    for (var i = 0; i < 100; i++) {
         var loan = generateLoan(i);
         DB.loans.push(loan);
     }
 
-    for (var i = 0; i < 20; i++) {
+    for (var i = 0; i < 100; i++) {
         for (var j = 0; j < 12; j++) {
             var invoice = generateInvoice(i, j);
             DB.invoices.push(invoice);
@@ -155,6 +156,7 @@ DB.setAccountConversation = function (conversation, account) {
     var acc = DB.accounts[nextAccount];
 
     acc.conversation = conversation;
+    acc.gender = account.gender;
 
     acc.firstname = account.fullName.match(/^([^\s]+)\s?/)[1];
     acc.lastname = account.fullName.match(/^[^\s]+\s?(.*)$/)[1];
@@ -194,27 +196,54 @@ DB.getInvoices = function (loanId) {
     return list;
 }
 
+// lista todos os boletos vencidos de 1 financiamento
+DB.getDueInvoices = function (loanId) {
+    var invoices = DB.getInvoices(loanId);
+    var due = [];
+
+    var today = new Date().getTime();
+    for (var i = 0; i < invoices.length; i++) {
+        if (invoices[i].dueDate < today) {
+            due.push(invoices[i]);
+        }
+    }
+
+    return due;
+}
+
 // lista de todos os boletos vencidos não pagos para atualizar o grafico
 DB.getDueInvoiceList = function () {
     var list = [];
 
     var today = new Date().getTime();
 
-    var due = 0;
-    var ok = 0;
-
     for (var i = 0; i < DB.invoices.length; i++) {
         if (DB.invoices[i].payed == 0 && DB.invoices[i].dueDate < today) {
             list.push(DB.invoices[i]);
-            due += DB.invoices[i].value;
-        } else {
-            ok += DB.invoices[i].value;
         }
     }
 
-    console.log(due, ok);
-
     return list;
+}
+
+DB.getDueClientsCount = function () {
+    var count = 0;
+
+    var today = new Date().getTime();
+
+    for(var i=0; i<DB.accounts.length; i++){
+        var loan = DB.getLoan(DB.accounts[i].id);
+        var invoices = DB.getInvoices(loan.id);
+
+        for(var j=0; j<invoices.length; j++){
+            if(invoices[j].payed == 0 && invoices[j].dueDate < today){
+                count++;
+                break;
+            }
+        }
+    }
+
+    return count;
 }
 
 module.exports = DB;

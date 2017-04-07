@@ -87,9 +87,9 @@ kadu:
     messageType: common_message
     text: >
         De acordo com sua atual situação: _NL_
-        Valor líquido do financiamento= R$ 31.000,00
-        Valor devido: 3 parcelas de R$ 1.140,03 = 3.420,09
-        Parcelamento de 1+5 X 578,56
+        Valor líquido do financiamento= R$ $FINANCTOTAL
+        Valor devido: $NUMPARCELAS parcelas de R$ $VALPARCELAS = $VALTOTAL
+        Parcelamento de 1+5 X $VALRENEG
         Forma pagamento: Boleto bancário
         O que nós temos para você é o seguinte:
     next_state: conversation_end
@@ -203,9 +203,9 @@ lara:
     messageType: common_message
     text: >
         De acordo com sua atual situação: _NL_
-        Valor líquido do financiamento= R$ 31.000,00 _NL_
-        Valor devido: 3 parcelas de R$ 1.140,03 = 3.420,09 _NL_
-        Parcelamento de 1+5 X 578,56 _NL_
+        Valor líquido do financiamento = $FINANCTOTAL _NL_
+        Valor devido: $NUMPARCELAS parcelas de R$ $VALPARCELAS = $VALTOTAL _NL_
+        Parcelamento de 1+5 X $VALRENEG _NL_
         Forma pagamento: Boleto bancário _NL_
     next_state: show_plans_message
 
