@@ -105,8 +105,6 @@ kadu:
         Valor líquido do financiamento = R$ 31.000,00 _NL_
         Valor devido: 3 parcelas de R$ 1.140,03 = 3.420,09 _NL_
         Parcelamento de 1+5 X 578,56 _NL_
-        Forma pagamento: Pagseguro
-        O que nós temos para você é o seguinte:
     next_state: conversation_end
 
 
@@ -200,11 +198,11 @@ lara:
   show_situation:
     messageType: common_message
     text: >
-        De acordo com sua atual situação: _NL_ _NL_
-        Valor líquido do financiamento = R$ 31.000,00 _NL_
-        Valor devido: 3 parcelas de R$ 1.140,03 = 3.420,09 _NL_
-        Parcelamento de 1+5 X 578,56 _NL_
-        Forma pagamento: Pagseguro _NL_
+      De acordo com sua atual situação: _NL_ _NL_
+      Valor líquido do financiamento = R$ 31.000,00 _NL_
+      Valor devido: 3 parcelas de R$ 1.140,03 = 3.420,09 _NL_
+      Parcelamento de 1+5 X 578,56 _NL_
+      Forma pagamento: Pagseguro _NL_
     next_state: show_plans_message
 
   show_plans_message:
@@ -271,7 +269,7 @@ lara:
 
   negotation_success:
     messageType: common_message
-    text: 'Pague através do link gerado para você e assim que o pagamento for verificado, te enviaremos uma confirmação! Foi ótimo negociar com você, NOME.'
+    text: 'Pague através do link gerado para você e assim que o pagamento for verificado, te enviaremos uma confirmação! Foi ótimo negociar com você.'
     next_state: relax_message
 
   relax_message:
